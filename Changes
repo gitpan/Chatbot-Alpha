@@ -1,0 +1,13 @@
+Revision history for Perl extension Chatbot::Alpha.
+
+1.30  Tue Feb 15 16:12:00 2004
+	- Added capability for topics.
+
+1.10  Thu Dec 23 14:20:23 2004
+	- Added the "#" command.
+	- Fixed bugs in reply matching.
+
+1.00  Wed Sep  6 16:22:40 2004
+	- original version; created by h2xs 1.23 with options
+		-X -n Chatbot::Alpha
+

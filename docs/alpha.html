@@ -1,0 +1,419 @@
+<html>
+<head>
+<title>.: Chatbot::Alpha - Chaos AI Technology :.</title>
+<link rel="StyleSheet" type="text/css" href="docs.css">
+</head>
+<body bgcolor="#FFFFFF" link="#0000FF" vlink="#0000FF" alink="#0000FF" text="#000000">
+
+<div align="center">
+<table bgcolor="#FFFFFF" width="650" border="0" cellspacing="0" cellpadding="0">
+	<tr>
+		<td background="gfx-topleft.jpg" width="17" height="61"></td>
+		<td background="gfx-top.jpg" width="547" height="61" align="left" valign="middle">
+			<font face="Arial" size="6" color="#000000" class="title">
+			<b>Chatbot::Alpha</b>
+			</font>
+		</td>
+		<td background="gfx-topright.jpg" width="86" height="61"></td>
+	</tr>
+	<tr>
+		<td background="gfx-left.jpg" width="17" height="24"></td>
+		<td background="gfx-subtitle.jpg" width="547" height="24">
+			<font face="Verdana" size="2" color="#000000" class="sub">
+			<b>AiChaos Alpha Chatterbot</b>
+			</font>
+		</td>
+		<td background="gfx-right.jpg" width="86" height="24"></td>
+	</tr>
+	<tr>
+		<td colspan="3" width="650" align="left" valign="top" class="main">
+			<blockquote>
+			<font face="Verdana" size="2" color="#000000" class="font">
+
+			<ul>
+				<li><a href="#name">Name</a></li>
+				<li><a href="#description">Description</a></li>
+				<li><a href="#usage">Synopsis</a></li>
+				<li><a href="#methods">Methods</a></li>
+				<ul>
+					<li><a href="#new">new</a></li>
+					<li><a href="#version">version</a></li>
+					<li><a href="#debug">debug</a></li>
+					<li><a href="#folder">load_folder</a></li>
+					<li><a href="#file">load_file</a></li>
+					<li><a href="#default">default_reply</a></li>
+					<li><a href="#sort">sort_replies</a></li>
+					<li><a href="#set">set_variable</a></li>
+					<li><a href="#rem">remove_variable</a></li>
+					<li><a href="#clr">clear_variables</a></li>
+					<li><a href="#reply">reply</a></li>
+				</ul>
+				<li><a href="#tut">Alpha Language Tutorial</a></li>
+				<ul>
+					<li><a href="#plus">+ (Plus)</a></li>
+					<li><a href="#minus">- (Minus)</a></li>
+					<li><a href="#at">@ (At)</a></li>
+					<li><a href="#star">* (Star)</a></li>
+					<li><a href="#amp">&amp; (Amperstand)</a></li>
+					<li><a href="#pound"># (Pound)</a></li>
+					<li><a href="#gt">&gt; (greater than)</a></li>
+					<li><a href="#lt">&lt; (less than)</a></li>
+				</ul>
+				<li><a href="#example">Example Reply Code</a></li>
+				<li><a href="#change">Change Log</a></li>
+				<li><a href="#author">Author</a></li>
+			</ul>
+			
+			<a name="name"></a>
+			<font color="#009999" size="6"><b>&#0164; Name</b></font><br>
+			<blockquote>
+				AiChaos, Inc.'s AlphaBot Reply System.
+			</blockquote><br><br>
+
+			<a name="description"></a>
+			<font color="#009999" size="6"><b>&#0164; Description</b></font><br>
+			<blockquote>
+				Alpha is a simplistic yet very powerful response language.
+			</blockquote><br><br>
+
+			<a name="usage"></a>
+			<font color="#009999" size="6"><b>&#0164; Synopsis</b></font><br>
+			<blockquote>
+				<table width="450" border="1" bordercolor="#999999" cellspacing="0" cellpadding="2" bgcolor="#EFEFEF">
+					<tr>
+						<td align="left" valign="top">
+							<font face="Courier New,Courier" size="2" color="#000000">
+							use Chatbot::Alpha;<br>
+							my $alpha = new Chatbot::Alpha (debug => 1);<br><br>
+
+							$alpha->load_folder ('./replies');<br>
+							$alpha->load_file ('./more_replies.txt');<br><br>
+
+							# Set and remove variables.<br>
+							$alpha->set_variable ("master", "1");<br>
+							$alpha->remove_variable ("master");<br>
+							$alpha->set_variable ("var", "value");<br>
+							$alpha->clear_variables;<br><br>
+
+							# Go get a reply.<br>
+							my $user = "foo";<br>
+							my $message = "Hello Alpha";<br>
+							my $reply = $alpha->reply ($user,$message);
+							</font>
+						</td>
+					</tr>
+				</table>
+			</blockquote><br><br>
+
+			<a name="methods"></a>
+			<font color="#009999" size="6"><b>&#0164; Methods</b></font><br>
+			<blockquote>
+				<a name="new"></a>
+				<b>new</b><br>
+				<blockquote>
+					Creates a new AlphaBot instance. If you want to have more than one
+					instance of Alpha (i.e. multiple bots), you need to create a new
+					instance for each one.<br><br>
+
+					This can also take the flag DEBUG, if you are a developer.<br><br>
+
+					<b>my $alpha = new Chatbot::Alpha (debug => 1);</b>
+				</blockquote><br>
+
+				<a name="version"></a>
+				<b>version</b><br>
+				<blockquote>
+					Returns the version of the module, useful if you want to require
+					a specific version.<br><br>
+
+					<b>my $version = $alpha->version;</b>
+				</blockquote><br>
+
+				<a name="debug"></a>
+				<b>debug</b><br>
+				<blockquote>
+					Prints a debug message... it shouldn't be called by itself, the module
+					will call it when a debug message needs to be printed.<br><br>
+
+					<b>$alpha->debug ($message);</b>
+				</blockquote><br>
+
+				<a name="folder"></a>
+				<b>load_folder</b><br>
+				<blockquote>
+					Loads a whole folder of reply files. By default it will load every file it finds,
+					but if the folder contains files of other types it may cause errors... in this
+					case, a parameter of FILE_TYPE may be sent, so that it will only open that type
+					of file. It's always best to send the FILE_TYPE in anyway.<br><br>
+
+					<b>$alpha->load_folder ("./replies", "txt");</b><br><br>
+
+					Will return 0 if the folder couldn't be accessed, or -1 if the folder was empty
+					(or no files of the specified type were found), or -2 if there was a fatal error
+					with one of the files. Having debug mode turned on will reveal the problem.
+				</blockquote><br>
+
+				<a name="file"></a>
+				<b>load_file</b><br>
+				<blockquote>
+					Loads a single file. This is also called by the load_folder method for each file
+					in that folder. Returns the same values as load_folder (0 = file not found,
+					-2 = file had errors)<br><br>
+
+					<b>$alpha->load_file ("./reply.txt");</b>
+				</blockquote><br>
+
+				<a name="default"></a>
+				<b>default_reply</b><br>
+				<blockquote>
+					Sets the reply that Alpha will return if no better reply can be found.
+					This can include pipes for random responses.<br><br>
+
+					<b>$alpha->default_reply ("Hmm...|I don't know.|Let's change the subject.");</b>
+				</blockquote><br>
+
+				<a name="sort"></a>
+				<b>sort_replies</b><br>
+				<blockquote>
+					Sorts the replies (normal triggers first, wildcards second). Call this subroutine after
+					loading all the reply files -- this subroutine will be called by the module itself when
+					it attempts to get a first reply, also.<p>
+
+					<b>$alpha->sort_replies;</b>
+				</blockquote><br>
+
+				<a name="set"></a>
+				<b>set_variable</b><br>
+				<blockquote>
+					Sets a global variable inside the brain.<br><br>
+
+					<b>$alpha->set_variable ("var", "value");</b>
+				</blockquote><br>
+
+				<a name="rem"></a>
+				<b>remove_variable</b><br>
+				<blockquote>
+					Removes a global variable from the brain.<br><br>
+
+					<b>$alpha->remove_variable ("var");</b>
+				</blockquote><br>
+
+				<a name="clr"></a>
+				<b>clear_variables</b><br>
+				<blockquote>
+					Clears all set variables added through set_variable<br><br>
+
+					<b>$alpha->clear_variables;</b>
+				</blockquote>
+
+				<a name="reply"></a>
+				<b>reply</b><br>
+				<blockquote>
+					Gets a reply. Prerequisite is that replies have to be loaded,
+					of course. Reply files are loaded through the load_folder or
+					load_file methods.<br><br>
+
+					<b>$alpha->reply ($id,$message);</b>
+				</blockquote>
+			</blockquote><br><br>
+
+			<a name="tut"></a>
+			<font color="#009999" size="6"><b>&#0164; Alpha Language Tutorial</b></font><br>
+			<blockquote>
+				The Alpha reply language is a simple line-by-line command-driven language. The comment
+				indicator is a "//", as it is in JavaScript and C++. Each line has two components: the
+				first character, the command char., and the rest of the line, the command arguments.
+				The command characters are as follows:<br><br>
+
+				<a name="plus"></a>
+				<b>+ (Plus)</b><br>
+				<blockquote>
+					The + command indicates the starting of a new reply, and that the immediately following
+					commands relates to that reply. The data for the + command would be the message trigger
+					(i.e. "+ hello bot"). Each reply can have only one trigger, however there is a "redirect"
+					command (see below) to redirect a message to another reply.
+				</blockquote><br>
+
+				<a name="minus"></a>
+				<b>- (Minus)</b><br>
+				<blockquote>
+					The - command indicates the response to the + trigger above it. The - command has many
+					different uses, however; for example, a single + and a single - can create a single
+					one-way question/answer response. Or, a single + can have multiple -'s and each - would
+					be a random response to the input. Or, if you're making a "conversation holder" (see below),
+					there would be one - as the first message. Or, if you're making a conditional, the -'s would
+					only be called when the conditionals all returned false.
+				</blockquote><br>
+
+				<a name="at"></a>
+				<b>@ (At Symbol)</b><br>
+				<blockquote>
+					The @ command is used as a redirect. Each reply set can have only one redirect element.
+					The data for the redirect would be the message that would be matched by another reply.
+					For example, if you have a reply to "identify yourself" with the bot's identity, you
+					could have another trigger "who are you" refer back to "identify yourself" - there's an
+					example of this, see below.
+				</blockquote><br>
+
+				<a name="star"></a>
+				<b>* (Star Symbol)</b><br>
+				<blockquote>
+					The * command is for conditionals. A good conditional looks like this: "* if (variable) = (value)",
+					each element should be separated by a single space. If the elements can't be found, it will not
+					match correctly. If the "IF" part isn't where it should be, the entire thing will be skipped over.
+					There's an example of this too, see below.
+				</blockquote><br>
+
+				<a name="amp"></a>
+				<b>&amp; (Amperstand)</b><br>
+				<blockquote>
+					The & command indicates a "conversation holder." One such reply would begin with the + command,
+					as always, followed immediately by a - command (for the first reply in the chain). All other
+					commands following would start with an "&" and would be called one at a time until there are
+					none left. There's a couple examples of this too, see below. Also, this is the one special case
+					in which the &lt;msg&gt; tag can be included in the replies.
+				</blockquote>
+
+				<a name="pound"></a>
+				<b># (Pound)</b><br>
+				<blockquote>
+					The # command indicates an evaluation. Its arguments would be Perl codes (assuming the parser
+					is Perl), and the code would be evaluated at the end. It's always a good idea to include a
+					- reply, in case something goes wrong.
+				</blockquote>
+
+				<a name="gt"></a>
+				<b>&gt; (Greater Than)</b><br>
+				<blockquote>
+					The &gt; command starts a labeled section of code. For now, is only used for topics.
+				</blockquote>
+
+				<a name="lt"></a>
+				<b>&lt; (Less Than)</b><br>
+				<blockquote>
+					The &lt; command ends a labeled section of code.
+				</blockquote>
+			</blockquote><br><br>
+
+			<a name="example"></a>
+			<font color="#009999" size="6"><b>&#0164; Example Reply Code</b></font><br>
+			<blockquote>
+				Here's an example reply code:<br><br>
+
+				<table width="450" border="1" bordercolor="#999999" cellspacing="0" cellpadding="2" bgcolor="#EFEFEF">
+					<tr>
+						<td align="left" valign="top">
+							<font face="Courier New,Courier" size="2" color="#000000">
+
+							// Test Replies<br><br>
+
+							// A standard reply to "hello", with multiple responses.<br>
+							+ hello<br>
+							- Hello there!<br>
+							- What's up?<br>
+							- This is random, eh?<br><br>
+
+							// A simple one-reply response to "what's up"<br>
+							+ what's up<br>
+							- Not much, you?<br><br>
+
+							// A test using &lt;star1&gt;<br>
+							+ say *<br>
+							- Um.... "&lt;star1&gt;"<br><br>
+
+							// This reply is referred to below.<br>
+							+ identify yourself<br>
+							- I am Alpha.<br><br>
+
+							// Refers the asker back to the reply above.<br>
+							+ who are you<br>
+							@ identify yourself<br><br>
+
+							// Conditionals Test<br>
+							+ am i your master<br>
+							* if master = 1::Yes, you are my master.<br>
+							- No, you are not my master.<br><br>
+
+							// Perl Evaluation Test<br>
+							+ what is 2 plus 2<br>
+							- Placeholder.<br>
+							# $reply = "2 + 2 = 4";<br><br>
+
+							// A Conversation Holder: Knock Knock!<br>
+							+ knock knock<br>
+							- Who's there?<br>
+							&amp; &lt;msg&gt; who?<br>
+							&amp; Ha! &lt;msg&gt;! That's a good one!<br><br>
+
+							// A Conversation Holder: Rambling!<br>
+							+ are you crazy<br>
+							- I was crazy once.<br>
+							&amp; They locked me away...<br>
+							&amp; In a room with padded walls.<br>
+							&amp; There were rats there...<br>
+							&amp; Did I mention I was crazy once?<br><br>
+
+							// Topic Test<br>
+							+ you suck<br>
+							- And you're very rude. Apologize now!{topic=apology}<br><br>
+  
+							&gt; topic apology<br><br>
+							<blockquote>
+								+ *<br>
+								- No, apologize for being so rude to me.<br><br>
+
+								// Set {topic=random} to return to the default topic.<br>
+								+ sorry<br>
+								- See, that wasn't too hard. I'll forgive you.{topic=random}<br><br>
+							</blockquote>
+							&lt; topic
+
+							</font>
+						</td>
+					</tr>
+				</table>
+			</blockquote>
+
+			<a name="change"></a>
+			<font color="#009999" size="6"><b>&#0164; Change Log</b></font><br>
+			<blockquote>
+				<b>Version 1.32</b><br>
+				<blockquote>
+					&#0164; Added the ">" and "<" commands, now used for topics.
+				</blockquote>
+				<b>Version 1.2</b><br>
+				<blockquote>
+					&#0164; "sort_replies" method added--sorts the replies (normal triggers will be checked before
+						wildcards, resulting in better matching!)
+				</blockquote>
+				<b>Version 1.1</b><br>
+				<blockquote>
+					&#0164; Added the <b>#</b> command.<br>
+					&#0164; Fixed bug in reply matching.
+				</blockquote><p>
+
+				<b>Version 1.0</b><br>
+				<blockquote>
+					&#0164; Initial release.
+				</blockquote>
+			</blockquote>
+
+			<a name="author"></a>
+			<font color="#009999" size="6"><b>&#0164; Author</b></font><br>
+			<blockquote>
+				Copyright (C) 2004 Cerone Kirsle; kirsle[at]aichaos[dot]com
+			</blockquote>
+
+			</font>
+			</blockquote>
+		</td>
+	</tr>
+</table><p>
+
+<a href="http://www.aichaos.com/" target="_blank">
+AiChaos, Inc.
+</a>
+</div>
+
+</body>
+</html>
