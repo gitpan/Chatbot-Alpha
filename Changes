@@ -1,5 +1,9 @@
 Revision history for Perl extension Chatbot::Alpha.
 
+1.40  Wed May  4 14:54:00 2005
+	- Fixed major bug: * being converted to (.*?) wasn't a global replace, so
+		thus far reply triggers could only contain a single *.
+
 1.30  Tue Feb 15 16:12:00 2004
 	- Added capability for topics.
 

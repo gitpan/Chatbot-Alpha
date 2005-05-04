@@ -1,10 +1,53 @@
 package Chatbot::Alpha;
 
-our $VERSION = '1.32';
+our $VERSION = '1.4';
+
+=head1 NAME
+
+AiChaos, Inc.'s AlphaBot Reply System.
+
+=head1 DESCRIPTION
+
+Alpha is a simplistic yet very powerful response language.
+
+=head1 USAGE
+
+	use Alpha;
+	my $alpha = new Chatbot::Alpha (debug => 1);
+
+	$alpha->load_folder ('./replies');
+	$alpha->load_file ('./more_replies.txt');
+
+	# Set and remove variables.
+	$alpha->set_variable ("master", "1");
+	$alpha->remove_variable ("master");
+	$alpha->set_variable ("var", "value");
+	$alpha->clear_variables;
+
+	# Go get a reply.
+	my $user = "foo";
+	my $message = "Hello Alpha";
+	my $reply = $alpha->reply ($user,$message);
+
+=cut
 
 # For debugging...
 use strict;
 use warnings;
+
+=head1 METHODS
+
+=head2 new
+
+Creates a new AlphaBot instance. If you want to have more than one
+instance of Alpha (i.e. multiple bots), you need to create a new
+instance for each one.
+
+This can also take the flag DEBUG, if you are a developer.
+
+	my $alpha = new Chatbot::Alpha (debug => 1);
+
+=cut
 
 sub new {
 	my $proto = shift;
@@ -23,11 +66,29 @@ sub new {
 	return $self;
 }
 
+=head2 version
+
+Returns the version of the module, useful if you want to require
+a specific version.
+
+	my $version = $alpha->version;
+
+=cut
+
 sub version {
 	my $self = shift;
 
 	return $self->{version};
 }
+
+=head2 debug
+
+Prints a debug message... it shouldn't be called by itself, the module
+will call it when a debug message needs to be printed.
+
+	$alpha->debug ($message);
+
+=cut
 
 sub debug {
 	my ($self,$msg) = @_;
@@ -39,6 +100,21 @@ sub debug {
 
 	return 1;
 }
+
+=head2 load_folder
+
+Loads a whole folder of reply files. By default it will load every file it finds,
+but if the folder contains files of other types it may cause errors... in this
+case, a parameter of FILE_TYPE may be sent, so that it will only open that type
+of file. It's always best to send the FILE_TYPE in anyway.
+
+	$alpha->load_folder ("./replies", "txt");
+
+Will return 0 if the folder couldn't be accessed, or -1 if the folder was empty
+(or no files of the specified type were found), or -2 if there was a fatal error
+with one of the files. Having debug mode turned on will reveal the problem.
+
+=cut
 
 sub load_folder {
 	my ($self,$dir) = (shift,shift);
@@ -60,6 +136,16 @@ sub load_folder {
 
 	return 1;
 }
+
+=head2 load_file
+
+Loads a single file. This is also called by the load_folder method for each file
+in that folder. Returns the same values as load_folder (0 = file not found,
+-2 = file had errors)
+
+	$alpha->load_file ("./reply.txt");
+
+=cut
 
 sub load_file {
 	my ($self,$file) = @_;
@@ -125,7 +211,7 @@ sub load_file {
 
 			$data =~ s/^\s//g;
 			$data =~ s/([^A-Za-z0-9 ])/\\$1/ig;
-			$data =~ s/\\\*/\(\.\*\?\)/i;
+			$data =~ s/\\\*/\(\.\*\?\)/ig;
 			$trigger = $data;
 			$self->debug ("Trigger: $trigger");
 
@@ -205,6 +291,15 @@ sub load_file {
 	return 1;
 }
 
+=head2 default_reply
+
+Sets the reply that Alpha will return if no better reply can be found. This can include
+pipes for random responses.
+
+	$alpha->default_reply ("Hmm...|I don't know.|Let's change the subject.");
+
+=cut
+
 sub default_reply {
 	my ($self,$reply) = @_;
 
@@ -213,6 +308,16 @@ sub default_reply {
 	# Save the reply.
 	$self->{default} = $reply;
 }
+
+=head2 sort_replies
+
+Sorts the replies (normal triggers first, wildcards second). Call this subroutine after
+loading all the reply files -- this subroutine will be called by the module itself when
+it attempts to get a first reply, also.
+
+	$alpha->sort_replies;
+
+=cut
 
 sub sort_replies {
 	my $self = shift;
@@ -266,6 +371,14 @@ sub sort_replies {
 	return 1;
 }
 
+=head2 set_variable
+
+Sets a global variable inside the brain.
+
+	$alpha->set_variable ("var", "value");
+
+=cut
+
 sub set_variable {
 	my ($self,$var,$value) = @_;
 	return 0 unless defined $var;
@@ -275,6 +388,14 @@ sub set_variable {
 	return 1;
 }
 
+=head2 remove_variable
+
+Removes a global variable from the brain.
+
+	$alpha->remove_variable ("var");
+
+=cut
+
 sub remove_variable {
 	my ($self,$var) = @_;
 	return 0 unless defined $var;
@@ -283,12 +404,29 @@ sub remove_variable {
 	return 1;
 }
 
+=head2 clear_variables
+
+Clears all set variables added through set_variable
+
+	$alpha->clear_variables;
+
+=cut
+
 sub clear_variables {
 	my $self = shift;
 
 	delete $self->{vars};
 	return 1;
 }
+
+=head2 reply
+
+Gets a reply. Prerequisite is that replies have to be loaded, of course. Reply files
+are loaded through the load_folder or load_file methods.
+
+	my $reply = $alpha->reply ("Hello Alpha");
+
+=cut
 
 sub reply {
 	my ($self,$id,$msg) = @_;
@@ -493,121 +631,7 @@ sub reply {
 	return $reply;
 }
 
-__END__
-
-=head1 NAME
-
-AiChaos, Inc.'s AlphaBot Reply System.
-
-=head1 DESCRIPTION
-
-Alpha is a simplistic yet very powerful response language.
-
-=head1 SYNOPSIS
-
-  use Alpha;
-  my $alpha = new Chatbot::Alpha (debug => 1);
-
-  $alpha->load_folder ('./replies');
-  $alpha->load_file ('./more_replies.txt');
-
-  # Set and remove variables.
-  $alpha->set_variable ("master", "1");
-  $alpha->remove_variable ("master");
-  $alpha->set_variable ("var", "value");
-  $alpha->clear_variables;
-
-  # Go get a reply.
-  my $user = "foo";
-  my $message = "Hello Alpha";
-  my $reply = $alpha->reply ($user,$message);
-
-=head1 METHODS
-
-=head2 new
-
-Creates a new AlphaBot instance. If you want to have more than one
-instance of Alpha (i.e. multiple bots), you need to create a new
-instance for each one.
-
-This can also take the flag DEBUG, if you are a developer.
-
-  my $alpha = new Chatbot::Alpha (debug => 1);
-
-=head2 version
-
-Returns the version of the module, useful if you want to require
-a specific version.
-
-  my $version = $alpha->version;
-
-=head2 debug
-
-Prints a debug message... it shouldn't be called by itself, the module
-will call it when a debug message needs to be printed.
-
-  $alpha->debug ($message);
-
-=head2 load_folder
-
-Loads a whole folder of reply files. By default it will load every file it finds,
-but if the folder contains files of other types it may cause errors... in this
-case, a parameter of FILE_TYPE may be sent, so that it will only open that type
-of file. It's always best to send the FILE_TYPE in anyway.
-
-  $alpha->load_folder ("./replies", "txt");
-
-Will return 0 if the folder couldn't be accessed, or -1 if the folder was empty
-(or no files of the specified type were found), or -2 if there was a fatal error
-with one of the files. Having debug mode turned on will reveal the problem.
-
-=head2 load_file
-
-Loads a single file. This is also called by the load_folder method for each file
-in that folder. Returns the same values as load_folder (0 = file not found,
--2 = file had errors)
-
-  $alpha->load_file ("./reply.txt");
-
-=head2 default_reply
-
-Sets the reply that Alpha will return if no better reply can be found. This can include
-pipes for random responses.
-
-  $alpha->default_reply ("Hmm...|I don't know.|Let's change the subject.");
-
-=head2 sort_replies
-
-Sorts the replies (normal triggers first, wildcards second). Call this subroutine after
-loading all the reply files -- this subroutine will be called by the module itself when
-it attempts to get a first reply, also.
-
-  $alpha->sort_replies;
-
-=head2 set_variable
-
-Sets a global variable inside the brain.
-
-  $alpha->set_variable ("var", "value");
-
-=head2 remove_variable
-
-Removes a global variable from the brain.
-
-  $alpha->remove_variable ("var");
-
-=head2 clear_variables
-
-Clears all set variables added through set_variable
-
-  $alpha->clear_variables;
-
-=head2 reply
-
-Gets a reply. Prerequisite is that replies have to be loaded, of course. Reply files
-are loaded through the load_folder or load_file methods.
-
-  my $reply = $alpha->reply ("Hello Alpha");
+=cut
 
 =head1 Alpha Language Tutorial
 
@@ -673,97 +697,81 @@ single line, you can go on to multiple lines).
 
 =cut
 
-=head2 > (greater than)
-
-The > command starts a labeled piece of code. For now, is only used for topics.
-
-=cut
-
-=head2 < (less than)
-
-The < command ends a labeled piece of code.
-
 =cut
 
 =head1 Example Reply Code
 
 Here's an example reply code:
 
-  // Test Replies
-  
-  // A standard reply to "hello", with multiple responses.
-  + hello
-  - Hello there!
-  - What's up?
-  - This is random, eh?
-  
-  // A simple one-reply response to "what's up"
-  + what's up
-  - Not much, you?
-  
-  // A test using <star1>
-  + say *
-  - Um.... "<star1>"
-  
-  // This reply is referred to below.
-  + identify yourself
-  - I am Alpha.
-  
-  // Refers the asker back to the reply above.
-  + who are you
-  @ identify yourself
-  
-  // Conditionals Test
-  + am i your master
-  * if master = 1::Yes, you are my master.
-  - No, you are not my master.
-  
-  // A Conversation Holder: Knock Knock!
-  + knock knock
-  - Who's there?
-  & <msg> who?
-  & Ha! <msg>! That's a good one!
-  
-  // A Conversation Holder: Rambling!
-  + are you crazy
-  - I was crazy once.
-  & They locked me away...
-  & In a room with padded walls.
-  & There were rats there...
-  & Did I mention I was crazy once?
-  
-  // Topic Test
-  + you suck
-  - And you're very rude. Apologize now!{topic=apology}
-  
-  > topic apology
-  
-    + *
-    - No, apologize for being so rude to me.
+	// Test Replies
 
-    // Set {topic=random} to return to the default topic.
-    + sorry
-    - See, that wasn't too hard. I'll forgive you.{topic=random}
-    
-  < topic
+	// A standard reply to "hello", with multiple responses.
+	+ hello
+	- Hello there!
+	- What's up?
+	- This is random, eh?
+
+	// A simple one-reply response to "what's up"
+	+ what's up
+	- Not much, you?
+
+	// A test using <star1>
+	+ say *
+	- Um.... "<star1>"
+
+	// This reply is referred to below.
+	+ identify yourself
+	- I am Alpha.
+
+	// Refers the asker back to the reply above.
+	+ who are you
+	@ identify yourself
+
+	// Conditionals Test
+	+ am i your master
+	* if master = 1::Yes, you are my master.
+	- No, you are not my master.
+
+	// A Conversation Holder: Knock Knock!
+	+ knock knock
+	- Who's there?
+	& <msg> who?
+	& Ha! <msg>! That's a good one!
+
+	// A Conversation Holder: Rambling!
+	+ are you crazy
+	- I was crazy once.
+	& They locked me away...
+	& In a room with padded walls.
+	& There were rats there...
+	& Did I mention I was crazy once?
 
 =cut
 
 =head1 CHANGE LOG
 
-Version 1.32
-- Added the ">" and "<" commands, now used for topics.
+Version 1.4
+
+  - Fixed major bug: * in reply triggers being converted to (.*?) wasn't a global replace,
+    so thus far reply triggers could only have a single * in them.
+
+Version 1.3
+
+  - Added the "<lt>" and "<gt>" commands, now used for topics.
 
 Version 1.2
-- "sort_replies" method added--sorts the replies (normal triggers will be checked before
-	wildcards, resulting in better matching!)
+
+  - "sort_replies" method added--sorts the replies (normal triggers will be checked before
+    wildcards, resulting in better matching!)
 
 Version 1.1
-- Fixed bug in reply matching with wildcards.
-- Added a "#" command for executing System Commands.
+
+  - Fixed bug in reply matching with wildcards.
+  - Added a "#" command for executing System Commands.
 
 Version 1.0
-- Initial Release
+
+  - Initial Release
 
 =cut
 
