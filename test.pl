@@ -9,6 +9,12 @@ my $alpha = new Chatbot::Alpha (debug => 1);
 my $load = $alpha->load_file ('./testreplies.txt');
 die "Error: $load" unless $load == 1;
 
+# Stream additional replies.
+$alpha->stream ("+ what is alpha\n"
+	. "- Alpha, aka Chatbot::Alpha, is a chatterbot brain created by AiChaos Inc.\n\n"
+	. "+ who created alpha\n"
+	. "- Chatbot::Alpha was created by Cerone Kirsle.");
+
 # User ID (so the module can keep track of different talkers)
 my $id = "foo";
 

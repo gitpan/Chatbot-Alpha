@@ -7,7 +7,7 @@ Installation:
 
 Usage:
 
-	See "docs/alpha.html" or the POD data within Alpha.pm.
+	See the POD data within Alpha.pm.
 
 Example:
 
@@ -17,5 +17,5 @@ Example:
 
 -------------------------------
 
-Copyright (C) 2004 Cerone Kirsle
-kirsle[at]aichaos[dot]com
+Copyright (C) 2005 Cerone Kirsle
+cjkirsle[at]aichaos[dot]com

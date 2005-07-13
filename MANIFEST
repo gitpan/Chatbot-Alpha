@@ -1,12 +1,4 @@
 Changes
-docs/alpha.html
-docs/docs.css
-docs/gfx-left.jpg
-docs/gfx-right.jpg
-docs/gfx-subtitle.jpg
-docs/gfx-top.jpg
-docs/gfx-topleft.jpg
-docs/gfx-topright.jpg
 Makefile.PL
 MANIFEST
 README

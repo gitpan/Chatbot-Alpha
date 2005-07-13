@@ -1,53 +1,10 @@
 package Chatbot::Alpha;
 
-our $VERSION = '1.4';
-
-=head1 NAME
-
-AiChaos, Inc.'s AlphaBot Reply System.
-
-=head1 DESCRIPTION
-
-Alpha is a simplistic yet very powerful response language.
-
-=head1 USAGE
-
-	use Alpha;
-	my $alpha = new Chatbot::Alpha (debug => 1);
-
-	$alpha->load_folder ('./replies');
-	$alpha->load_file ('./more_replies.txt');
-
-	# Set and remove variables.
-	$alpha->set_variable ("master", "1");
-	$alpha->remove_variable ("master");
-	$alpha->set_variable ("var", "value");
-	$alpha->clear_variables;
-
-	# Go get a reply.
-	my $user = "foo";
-	my $message = "Hello Alpha";
-	my $reply = $alpha->reply ($user,$message);
-
-=cut
+our $VERSION = '1.5';
 
 # For debugging...
 use strict;
 use warnings;
-
-=head1 METHODS
-
-=head2 new
-
-Creates a new AlphaBot instance. If you want to have more than one
-instance of Alpha (i.e. multiple bots), you need to create a new
-instance for each one.
-
-This can also take the flag DEBUG, if you are a developer.
-
-	my $alpha = new Chatbot::Alpha (debug => 1);
-
-=cut
 
 sub new {
 	my $proto = shift;
@@ -58,6 +15,7 @@ sub new {
 		debug   => 0,
 		version => $VERSION,
 		default => "I'm afraid I don't know how to reply to that!",
+		stream  => undef,
 		@_,
 	};
 
@@ -66,29 +24,11 @@ sub new {
 	return $self;
 }
 
-=head2 version
-
-Returns the version of the module, useful if you want to require
-a specific version.
-
-	my $version = $alpha->version;
-
-=cut
-
 sub version {
 	my $self = shift;
 
 	return $self->{version};
 }
-
-=head2 debug
-
-Prints a debug message... it shouldn't be called by itself, the module
-will call it when a debug message needs to be printed.
-
-	$alpha->debug ($message);
-
-=cut
 
 sub debug {
 	my ($self,$msg) = @_;
@@ -100,21 +40,6 @@ sub debug {
 
 	return 1;
 }
-
-=head2 load_folder
-
-Loads a whole folder of reply files. By default it will load every file it finds,
-but if the folder contains files of other types it may cause errors... in this
-case, a parameter of FILE_TYPE may be sent, so that it will only open that type
-of file. It's always best to send the FILE_TYPE in anyway.
-
-	$alpha->load_folder ("./replies", "txt");
-
-Will return 0 if the folder couldn't be accessed, or -1 if the folder was empty
-(or no files of the specified type were found), or -2 if there was a fatal error
-with one of the files. Having debug mode turned on will reveal the problem.
-
-=cut
 
 sub load_folder {
 	my ($self,$dir) = (shift,shift);
@@ -137,26 +62,38 @@ sub load_folder {
 	return 1;
 }
 
-=head2 load_file
+sub stream {
+	my ($self,$code) = @_;
 
-Loads a single file. This is also called by the load_folder method for each file
-in that folder. Returns the same values as load_folder (0 = file not found,
--2 = file had errors)
+	# Must have Alpha code defined.
+	if (!defined $code) {
+		warn "Chatbot::Alpha::stream - no code included with call!\n";
+		return 0;
+	}
 
-	$alpha->load_file ("./reply.txt");
-
-=cut
+	# Stream the code.
+	$self->{stream} = $code;
+	$self->load_file (undef,1);
+}
 
 sub load_file {
-	my ($self,$file) = @_;
+	my ($self,$file,$stream) = @_;
+	$stream = 0 unless defined $stream;
+	$stream = 0 if defined $file;
 
 	$self->debug ("load_file called for file: $file");
 
 	# Open the file.
-	open (FILE, "$file") or return 0;
-	my @data = <FILE>;
-	close (FILE);
-	chomp @data;
+	my @data = ();
+	if ($stream != 1) {
+		open (FILE, "$file") or return 0;
+		@data = <FILE>;
+		close (FILE);
+		chomp @data;
+	}
+	else {
+		@data = split ("\n", $self->{stream});
+	}
 
 	# (Re)-define temporary variables.
 	my $topic = 'random';
@@ -291,15 +228,6 @@ sub load_file {
 	return 1;
 }
 
-=head2 default_reply
-
-Sets the reply that Alpha will return if no better reply can be found. This can include
-pipes for random responses.
-
-	$alpha->default_reply ("Hmm...|I don't know.|Let's change the subject.");
-
-=cut
-
 sub default_reply {
 	my ($self,$reply) = @_;
 
@@ -308,16 +236,6 @@ sub default_reply {
 	# Save the reply.
 	$self->{default} = $reply;
 }
-
-=head2 sort_replies
-
-Sorts the replies (normal triggers first, wildcards second). Call this subroutine after
-loading all the reply files -- this subroutine will be called by the module itself when
-it attempts to get a first reply, also.
-
-	$alpha->sort_replies;
-
-=cut
 
 sub sort_replies {
 	my $self = shift;
@@ -371,14 +289,6 @@ sub sort_replies {
 	return 1;
 }
 
-=head2 set_variable
-
-Sets a global variable inside the brain.
-
-	$alpha->set_variable ("var", "value");
-
-=cut
-
 sub set_variable {
 	my ($self,$var,$value) = @_;
 	return 0 unless defined $var;
@@ -388,14 +298,6 @@ sub set_variable {
 	return 1;
 }
 
-=head2 remove_variable
-
-Removes a global variable from the brain.
-
-	$alpha->remove_variable ("var");
-
-=cut
-
 sub remove_variable {
 	my ($self,$var) = @_;
 	return 0 unless defined $var;
@@ -404,29 +306,12 @@ sub remove_variable {
 	return 1;
 }
 
-=head2 clear_variables
-
-Clears all set variables added through set_variable
-
-	$alpha->clear_variables;
-
-=cut
-
 sub clear_variables {
 	my $self = shift;
 
 	delete $self->{vars};
 	return 1;
 }
-
-=head2 reply
-
-Gets a reply. Prerequisite is that replies have to be loaded, of course. Reply files
-are loaded through the load_folder or load_file methods.
-
-	my $reply = $alpha->reply ("Hello Alpha");
-
-=cut
 
 sub reply {
 	my ($self,$id,$msg) = @_;
@@ -631,154 +516,295 @@ sub reply {
 	return $reply;
 }
 
-=cut
+1;
+__END__
 
-=head1 Alpha Language Tutorial
+=head1 NAME
 
-The Alpha reply language is a simple line-by-line command-driven language. The comment
-indicator is a "//", as it is in JavaScript and C++. Each line has two components: the
-first character, the command char., and the rest of the line, the command arguments.
-The command characters are as follows:
+Chatbot::Alpha - A simple chatterbot brain.
+
+=head1 SYNOPSIS
+
+  use Chatbot::Alpha;
+  
+  # Create a new Alpha instance.
+  my $alpha = new Chatbot::Alpha();
+  
+  # Load replies from a directory.
+  $alpha->load_folder ("./replies");
+  
+  # Load an additional response file.
+  $alpha->load_file ("./more_replies.txt");
+  
+  # Input even more replies directly from Perl.
+  $alpha->stream ("+ what is alpha\n"
+                . "- Alpha, aka Chatbot::Alpha, is a chatterbot brain created by AiChaos Inc.\n\n"
+                . "+ who created alpha\n"
+                . "- Chatbot::Alpha was created by Cerone Kirsle.");
+  
+  # Get a response.
+  my $reply = $alpha->reply ("user", "hello alpha");
+
+=head1 DESCRIPTION
+
+The Alpha brain was developed by AiChaos, Inc. for our chatterbots. The Alpha brain's language is line-by-line,
+command-driven. Alpha is a simplistic brain yet is very powerful for making impressive response systems.
+
+=head1 METHODS
+
+=head2 new (ARGUMENTS)
+
+Creates a new Chatbot::Alpha object. Pass in any default arguments (in hash form). Avoid arguments with underscores
+and the "stream" key. These are reserved.
+
+Returns a Chatbot::Alpha instance.
+
+=head2 version
+
+Returns the version number of the module.
+
+=head2 load_folder (DIRECTORY[, TYPES])
+
+Loads a directory of response files. The directory name is required. TYPES is the file extension of your response files.
+If TYPES is omitted, every file is considered a response file.
+
+Just as a side note, the extension agreed upon for Alpha files is .CBA, but the extension is not important.
+
+=head2 load_file (FILE_PATH[, STREAM])
+
+Loads a single file. The "load_folder" method calls this for each valid file. If STREAM is 1, the current contents of
+the stream cache will be loaded (assuming FILE_PATH is omitted). You shouldn't need to worry about using STREAM, see
+the "stream" method below.
+
+=head2 stream (ALPHA_CODE)
+
+Inputs a set of Alpha code directly into the module ("streaming") rather than loading it from an external document.
+See synopsis for an example.
+
+=head2 default_reply (RANDOM|RANDOM|RANDOM)
+
+Sets up a default response in case there is no trigger for the message in your reply code. Separate random replies
+using pipes. See "Tips and Tricks" below for some clever ways to handle default_reply.
+
+=head2 sort_replies
+
+Sorts the replies already loaded: solid triggers go first, followed by triggers containing wildcards. If you fail to
+call this method yourself, it will be called automatically when "reply" is called.
+
+=head2 set_variable (VARIABLE, VALUE)
+
+Sets an internal variable. These are used primarily in conditionals in your Alpha responses.
+
+=head2 remove_variable (VARIABLE)
+
+Removes an internal variable.
+
+=head2 clear_variables
+
+Clears all internal variables (only those set with set_variable).
+
+=head2 reply (ID, MESSAGE)
+
+Scans the loaded replies to find a response to MESSAGE. ID is a unique ID for the particular person requesting a response.
+The ID is used for things such as topics and conversation holders. Returns a reply, or one of default_reply if a better
+response wasn't found.
+
+=head1 ALPHA LANGUAGE TUTORIAL
+
+The Alpha response language is a line-by-line command-driven language. The first character on each line is the command
+(prepent white spaces are ignored). Everything following the command are the command's arguments. The commands are as
+follows:
 
 =head2 + (Plus)
 
-The + command indicates the starting of a new reply, and that the immediately following
-commands relates to that reply. The data for the + command would be the message trigger
-(i.e. "+ hello bot"). Each reply can have only one trigger, however there is a "redirect"
-command (see below) to redirect a message to another reply.
-
-=cut
+The + symbol indicates a trigger. Every Alpha reply begins with this command. The arguments are what the trigger is
+(i.e. "hello chatbot"). If the message matches this trigger, then the rest of the response code is considered. Else,
+the triggers are skipped over until a good match is found for the message.
 
 =head2 - (Minus)
 
-The - command indicates the response to the + trigger above it. The - command has many
-different uses, however; for example, a single + and a single - can create a single
-one-way question/answer response. Or, a single + can have multiple -'s and each - would
-be a random response to the input. Or, if you're making a "conversation holder" (see below),
-there would be one - as the first message. Or, if you're making a conditional, the -'s would
-only be called when the conditionals all returned false.
+The - symbol indicates a response to a trigger. This and all other commands (except for > and <) always go below the +
+command. A single + and a single - will be a one-way question/answer scenario. If more than one - is used, they will
+become random replies to the trigger. If conditionals are used, the -'s will be considered if each conditional is false.
+If a conversation holder is used, the - will be the first reply sent in the conversation. See the example code below
+for examples.
 
-=cut
+=head2 @ (At)
 
-=head2 @ (At Symbol)
+The @ symbol indicates a redirection. Alpha triggers are "dead-on" triggers, meaning pipes can't be used to make multiple
+matchibles for one reply. In the case you would want more than one trigger (i.e. "hello" and "hey"), you use the @ command
+to redirect them to eachother. See the example code below.
 
-The @ command is used as a redirect. Each reply set can have only one redirect element.
-The data for the redirect would be the message that would be matched by another reply.
-For example, if you have a reply to "identify yourself" with the bot's identity, you
-could have another trigger "who are you" refer back to "identify yourself" - there's an
-example of this, see below.
+=head2 * (Asterisk)
 
-=cut
+The * command is for conditionals. At this time conditionals are very primative:
 
-=head2 * (Star Symbol)
+  * if variable = value::this reply is sent back
 
-The * command is for conditionals. A good conditional looks like this: "* if (variable) = (value)",
-each element should be separated by a single space. If the elements can't be found, it will not
-match correctly. If the "IF" part isn't where it should be, the entire thing will be skipped over.
-There's an example of this too, see below.
-
-=cut
+More/better support for conditionals may or may not be added in the future.
 
 =head2 & (Amperstand)
 
-The & command indicates a "conversation holder." One such reply would begin with the + command,
-as always, followed immediately by a - command (for the first reply in the chain). All other
-commands following would start with an "&" and would be called one at a time until there are
-none left. There's a couple examples of this too, see below. Also, this is the one special case
-in which the <msg> tag can be included in the replies.
-
-=cut
+The & command is for conversation holders. Each & will be called in succession once the trigger has been matched. Each
+message, no matter what it is, will call the next one down the line. This is also the rare case in which a "<msg>" tag
+can be included in the response, for capturing the user's message. See the example code.
 
 =head2 # (Pound)
 
-The # command indicates text to be evaluated as Perl code. A response can have as many # commands
-as needed, each one is added to the last one (if your code is too complex to be read easily on a
-single line, you can go on to multiple lines).
+The # command is for executing actual Perl codes within your Alpha responses. The # commands are executed last, after
+all the other reply handling mechanisms are completed. So in this sense, it's always a good idea to include at least one
+reply (-) to fall back on in case the Perl code fails.
 
-=cut
+=head2 > (Greater Than)
 
-=cut
+The > starts a labeled piece of code. At this time, the only label supported is "topic" -- see "TOPICS" below.
 
-=head1 Example Reply Code
+=head2 < (Less Than)
 
-Here's an example reply code:
+This command closes a label.
 
-	// Test Replies
+=head1 EXAMPLE ALPHA CODE
 
-	// A standard reply to "hello", with multiple responses.
-	+ hello
-	- Hello there!
-	- What's up?
-	- This is random, eh?
+  // Test Replies
+  
+  // A standard reply to "hello", with multiple responses.
+  + hello
+  - Hello there!
+  - What's up?
+  - This is random, eh?
+  
+  // A simple one-reply response to "what's up"
+  + what's up
+  - Not much, you?
+  
+  // A test using <star1>
+  + say *
+  - Um.... "<star1>"
+  
+  // This reply is referred to below.
+  + identify yourself
+  - I am Alpha.
+  
+  // Refers the asker back to the reply above.
+  + who are you
+  @ identify yourself
+  
+  // Conditionals Test
+  + am i your master
+  * if master = 1::Yes, you are my master.
+  - No, you are not my master.
+  
+  // Perl Evaluation Test
+  + what is 2 plus 2
+  # $reply = "2 + 2 = 4";
+  
+  // A Conversation Holder: Knock Knock!
+  + knock knock
+  - Who's there?
+  & <msg> who?
+  & Ha! <msg>! That's a good one!
+  
+  // A Conversation Holder: Rambling!
+  + are you crazy
+  - I was crazy once.
+  & They locked me away...
+  & In a room with padded walls.
+  & There were rats there...
+  & Did I mention I was crazy once?
+  
+  // Topic Test
+  + you suck
+  - And you're very rude. Apologize now!{topic=apology}
+  
+  > topic apology
+  
+     + *
+     - No, apologize for being so rude to me.
+  
+     // Set {topic=random} to return to the default topic.
+     + sorry
+     - See, that wasn't too hard. I'll forgive you.{topic=random}
+  
+  < topic
 
-	// A simple one-reply response to "what's up"
-	+ what's up
-	- Not much, you?
+=head1 TOPICS
 
-	// A test using <star1>
-	+ say *
-	- Um.... "<star1>"
+As seen in the example code, Chatbot::Alpha has support for topics.
 
-	// This reply is referred to below.
-	+ identify yourself
-	- I am Alpha.
+=head2 Setting a Topic
 
-	// Refers the asker back to the reply above.
-	+ who are you
-	@ identify yourself
+To set a topic, use the {topic} tag in a response:
 
-	// Conditionals Test
-	+ am i your master
-	* if master = 1::Yes, you are my master.
-	- No, you are not my master.
+  + play hangman
+  - Alright, let's play hangman.{topic=hangman}
 
-	// A Conversation Holder: Knock Knock!
-	+ knock knock
-	- Who's there?
-	& <msg> who?
-	& Ha! <msg>! That's a good one!
+Use the > and < commands (labels) to specify a section of code for the topic to exist in.
 
-	// A Conversation Holder: Rambling!
-	+ are you crazy
-	- I was crazy once.
-	& They locked me away...
-	& In a room with padded walls.
-	& There were rats there...
-	& Did I mention I was crazy once?
+  > topic hangman
+    + *
+    - 500 Internal Error. Type "quit" to quit.
+    # $reply = &main::hangman ($msg);
 
-=cut
+    + quit
+    - Done playing hangman.{topic=random}
+  < topic
 
-=head1 CHANGE LOG
+The default topic is "random" -- setting the topic to random breaks out of code-defined
+topics. When in a topic, any triggers that aren't in that topic are not available for
+reply matching. In this way, you can have the same trigger many times but under different
+topics without them interfering with one another.
 
-Version 1.4
+=head1 TIPS AND TRICKS
 
-  - Fixed major bug: * in reply triggers being converted to (.*?) wasn't a global replace,
-    so thus far reply triggers could only have a single * in them.
+=head2 Things to do with default_reply
 
-Version 1.3
+One trick you can do with default_reply is set it to something totally random like "alpha no reply matched".
+When you're getting a reply, if the reply turns out to be "alpha no reply matched" you can go back into
+Alpha with another reply call, but call something like "wildcard" as the trigger. In your response code,
+you could then add a trigger that would be called when nothing else could be found.
 
-  - Added the "<lt>" and "<gt>" commands, now used for topics.
+=head1 KNOWN BUGS
 
-Version 1.2
+  - Conversation holders aren't always perfect. If a different trigger
+    was matched 100% dead-on, the conversation may become broken.
+  - If a bogus topic is started (a topic with no responses) there is
+    no handler for repairing the topic.
 
-  - "sort_replies" method added--sorts the replies (normal triggers will be checked before
-    wildcards, resulting in better matching!)
+=head1 FUTURE PLANS
 
-Version 1.1
-
-  - Fixed bug in reply matching with wildcards.
-  - Added a "#" command for executing System Commands.
-
-Version 1.0
-
-  - Initial Release
-
-=cut
+  - Add a command for long responses so that they can continue on multiple
+    lines. For example:
+  
+       + hello bot
+       - Hello there human. This reply is_
+         ^ very very long and needs to span_
+         ^ across multiple lines.
+  
+  - Create a Chatbot::Alpha::Sort module for taking your already existing external
+    Alpha documents and sorting the triggers, i.e. to make them alphabetic, like
+    standard AIML is.
 
 =head1 AUTHOR
 
-Copyright (C) 2004 Cerone Kirsle; kirsle[at]aichaos[dot]com
+Cerone J. Kirsle, cjkirsle "@" aichaos.com
+
+=head1 COPYRIGHT AND LICENSE
+
+    Chatbot::Alpha - A simple chatterbot brain.
+    Copyright (C) 2005  Cerone J. Kirsle
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 =cut
-
-1;
