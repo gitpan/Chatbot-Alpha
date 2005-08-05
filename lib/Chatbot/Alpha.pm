@@ -770,6 +770,30 @@ you could then add a trigger that would be called when nothing else could be fou
   - If a bogus topic is started (a topic with no responses) there is
     no handler for repairing the topic.
 
+=head1 CHANGES
+
+  Version 1.6
+  - Created Chatbot::Alpha::Sort for sorting your Alpha documents.
+  
+  Version 1.5
+  - Added "stream" method, revised POD.
+  
+  Version 1.4
+  - Fixed bug with wildcard subsitutitons.
+  
+  Version 1.3
+  - Added the ">" and "<" commands, now used for topics.
+  
+  Version 1.2
+  - "sort_replies" method added
+  
+  Version 1.1
+  - Fixed a bug in reply matching with wildcards.
+  - Added a "#" command for executing System Commands.
+  
+  Version 1.0
+  - Initial release.
+
 =head1 FUTURE PLANS
 
   - Add a command for long responses so that they can continue on multiple
@@ -783,6 +807,10 @@ you could then add a trigger that would be called when nothing else could be fou
   - Create a Chatbot::Alpha::Sort module for taking your already existing external
     Alpha documents and sorting the triggers, i.e. to make them alphabetic, like
     standard AIML is.
+
+=head1 SEE ALSO
+
+Chatbot::Alpha::Sort
 
 =head1 AUTHOR
 

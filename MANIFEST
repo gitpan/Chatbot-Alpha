@@ -6,3 +6,4 @@ test.pl
 testreplies.txt
 t/Chatbot-Alpha.t
 lib/Chatbot/Alpha.pm
+lib/Chatbot/Alpha/Sort.pm
