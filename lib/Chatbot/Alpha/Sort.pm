@@ -1,6 +1,6 @@
 package Chatbot::Alpha::Sort;
 
-our $VERSION = '0.1';
+our $VERSION = '0.2';
 
 use strict;
 use warnings;
@@ -52,6 +52,11 @@ sub start {
 		ext   => 'cba',
 		@_,
 	};
+
+	# Make outdir if it doesn't exist.
+	if ($method->{out} ne '.' && !-e $method->{out}) {
+		mkdir ($method->{out});
+	}
 
 	# Alpha sorting: sorts from A.cba to Z.cba
 	if ($method->{files} eq 'alpha') {
@@ -184,6 +189,230 @@ sub start {
 			print TOPICS "< topic\n\n";
 		}
 		close (TOPICS);
+
+		return 1;
+	}
+	elsif ($method->{files} eq 'intact') {
+		# Keeping files intact.
+		$self->debug ("Keeping filenames intact");
+
+		opendir (DIR, "$method->{dir}");
+		foreach my $file (sort(grep(!/^\./, readdir(DIR)))) {
+			next unless $file =~ /\.$method->{ext}/i;
+
+			# Create a new Alpha object for this file.
+			my $alpha = new Chatbot::Alpha();
+			$alpha->load_file ("$method->{dir}/$file");
+
+			open (WRITE, ">$method->{out}/$file");
+
+			# Do topics first.
+			foreach my $topic (keys %{$alpha->{_replies}}) {
+				next if $topic eq 'random';
+				my @trigs = keys %{$alpha->{_replies}->{$topic}};
+				@trigs = sort(@trigs);
+
+				print WRITE "> topic $topic\n\n";
+
+				foreach my $trig (@trigs) {
+					$self->debug ("Writing trigger $trig to topics\.$method->{ext}");
+
+					$trig =~ s/\(\.\*\?\)/\*/ig;
+
+					print WRITE "\t+ $trig\n";
+
+					$trig =~ s/\*/\(\.\*\?\)/ig;
+
+					my @data = keys (%{$alpha->{_replies}->{$topic}->{$trig}});
+					@data = sort(@data);
+
+					foreach my $item (@data) {
+						if ($item =~ /^\d/) {
+							print WRITE "\t- $alpha->{_replies}->{$topic}->{$trig}->{$item}\n";
+						}
+						elsif ($item =~ /^(conditions|convo)$/i) {
+							my @sub = keys %{$alpha->{_replies}->{$topic}->{$trig}->{$item}};
+							@sub = reverse(@sub);
+							foreach my $s (@sub) {
+								if ($item eq 'conditions') {
+									print WRITE "\t* ";
+								}
+								else {
+									print WRITE "\t& ";
+								}
+								print WRITE "$alpha->{_replies}->{$topic}->{$trig}->{$item}->{$s}\n";
+							}
+						}
+						elsif ($item eq 'redirect') {
+							print WRITE "\t\@ $alpha->{_replies}->{$topic}->{$trig}->{redirect}\n";
+						}
+						elsif ($item eq 'system') {
+							print WRITE "\t# $alpha->{_replies}->{$topic}->{$trig}->{system}->{codes}\n";
+						}
+					}
+
+					print WRITE "\n";
+				}
+
+				print WRITE "< topic\n\n";
+			}
+
+			# Now, normal replies.
+			my @trigs = keys %{$alpha->{_replies}->{random}};
+			@trigs = sort(@trigs);
+
+			foreach my $trig (@trigs) {
+				$self->debug ("Writing trigger $trig to topics\.$method->{ext}");
+
+				$trig =~ s/\(\.\*\?\)/\*/ig;
+
+				print WRITE "+ $trig\n";
+
+				$trig =~ s/\*/\(\.\*\?\)/ig;
+
+				my @data = keys (%{$alpha->{_replies}->{random}->{$trig}});
+				@data = sort(@data);
+
+				foreach my $item (@data) {
+					if ($item =~ /^\d/) {
+						print WRITE "- $alpha->{_replies}->{random}->{$trig}->{$item}\n";
+					}
+					elsif ($item =~ /^(conditions|convo)$/i) {
+						my @sub = keys %{$alpha->{_replies}->{random}->{$trig}->{$item}};
+						@sub = reverse(@sub);
+						foreach my $s (@sub) {
+							if ($item eq 'conditions') {
+								print WRITE "* ";
+							}
+							else {
+								print WRITE "& ";
+							}
+							print WRITE "$alpha->{_replies}->{random}->{$trig}->{$item}->{$s}\n";
+						}
+					}
+					elsif ($item eq 'redirect') {
+						print WRITE "\@ $alpha->{_replies}->{random}->{$trig}->{redirect}\n";
+					}
+					elsif ($item eq 'system') {
+						print WRITE "# $alpha->{_replies}->{random}->{$trig}->{system}->{codes}\n";
+					}
+				}
+
+				print WRITE "\n";
+			}
+
+			close (WRITE);
+		}
+		closedir (DIR);
+
+		return 1;
+	}
+	elsif ($method->{files} eq 'single') {
+		$self->debug ("Merging all files into one");
+
+		my $alpha = new Chatbot::Alpha();
+		$alpha->load_folder ($method->{dir},$method->{ext});
+
+		open (WRITE, ">$method->{out}/sorted.cba");
+
+		# Do topics first.
+		foreach my $topic (keys %{$alpha->{_replies}}) {
+			next if $topic eq 'random';
+			my @trigs = keys %{$alpha->{_replies}->{$topic}};
+			@trigs = sort(@trigs);
+
+			print WRITE "> topic $topic\n\n";
+
+			foreach my $trig (@trigs) {
+				$self->debug ("Writing trigger $trig to topics\.$method->{ext}");
+
+				$trig =~ s/\(\.\*\?\)/\*/ig;
+
+				print WRITE "\t+ $trig\n";
+
+				$trig =~ s/\*/\(\.\*\?\)/ig;
+
+				my @data = keys (%{$alpha->{_replies}->{$topic}->{$trig}});
+				@data = sort(@data);
+
+				foreach my $item (@data) {
+					if ($item =~ /^\d/) {
+						print WRITE "\t- $alpha->{_replies}->{$topic}->{$trig}->{$item}\n";
+					}
+					elsif ($item =~ /^(conditions|convo)$/i) {
+						my @sub = keys %{$alpha->{_replies}->{$topic}->{$trig}->{$item}};
+						@sub = reverse(@sub);
+						foreach my $s (@sub) {
+							if ($item eq 'conditions') {
+								print WRITE "\t* ";
+							}
+							else {
+								print WRITE "\t& ";
+							}
+							print WRITE "$alpha->{_replies}->{$topic}->{$trig}->{$item}->{$s}\n";
+						}
+					}
+					elsif ($item eq 'redirect') {
+						print WRITE "\t\@ $alpha->{_replies}->{$topic}->{$trig}->{redirect}\n";
+					}
+					elsif ($item eq 'system') {
+						print WRITE "\t# $alpha->{_replies}->{$topic}->{$trig}->{system}->{codes}\n";
+					}
+				}
+
+				print WRITE "\n";
+			}
+
+			print WRITE "< topic\n\n";
+		}
+
+		# Now, normal replies.
+		my @trigs = keys %{$alpha->{_replies}->{random}};
+		@trigs = sort(@trigs);
+
+		foreach my $trig (@trigs) {
+			$self->debug ("Writing trigger $trig to topics\.$method->{ext}");
+
+			$trig =~ s/\(\.\*\?\)/\*/ig;
+
+			print WRITE "+ $trig\n";
+
+			$trig =~ s/\*/\(\.\*\?\)/ig;
+
+			my @data = keys (%{$alpha->{_replies}->{random}->{$trig}});
+			@data = sort(@data);
+
+			foreach my $item (@data) {
+				if ($item =~ /^\d/) {
+					print WRITE "- $alpha->{_replies}->{random}->{$trig}->{$item}\n";
+				}
+				elsif ($item =~ /^(conditions|convo)$/i) {
+					my @sub = keys %{$alpha->{_replies}->{random}->{$trig}->{$item}};
+					@sub = reverse(@sub);
+					foreach my $s (@sub) {
+						if ($item eq 'conditions') {
+							print WRITE "* ";
+						}
+						else {
+							print WRITE "& ";
+						}
+						print WRITE "$alpha->{_replies}->{random}->{$trig}->{$item}->{$s}\n";
+					}
+				}
+				elsif ($item eq 'redirect') {
+					print WRITE "\@ $alpha->{_replies}->{random}->{$trig}->{redirect}\n";
+				}
+				elsif ($item eq 'system') {
+					print WRITE "# $alpha->{_replies}->{random}->{$trig}->{system}->{codes}\n";
+				}
+			}
+
+			print WRITE "\n";
+		}
+
+		close (WRITE);
+
+		return 1;
 	}
 }
 
@@ -245,18 +474,25 @@ are as follows:
      Currently the only supported SORT_TYPE is "alpha" -- alphabetic
      sorting.
 
-=head1 TODO LIST
+=head1 SORT TYPES (FILES)
 
-  :: Add more file sorting methods:
-     - Sort with "keep filenames intact" -- would keep your original filename
-       setup, but sort the triggers inside each file alphabetically.
-     - Sort into a single file -- would take ALL your Alpha replies, sort them
-       alphabetically and write to a single file.
-  :: Add sorting method:
-     - Reverse alphabetic sorting.
+B<alpha>
+Sorts the files alphabetically. Will create files "A.cba" through "Z.cba", as well as "star.cba" and "other.cba",
+and a "topics.cba" to keep all topics together. Triggers within each file are sorted alphabetically.
+
+B<intact>
+Keeps your original filename structure intact; only sorts triggers alphabetically within each file (topics go
+to the top of the file's contents).
+
+B<single>
+Takes ALL your Alpha documents and merges them into one single file. Will write the finished file to "sorted.cba"
+in the OUT directory. Topics are written first.
 
 =head1 CHANGES
 
+  Version 0.2
+  - Added sorting with "keep filenames intact" as well as "single filename"
+  
   Version 0.1
   - Initial release.
 

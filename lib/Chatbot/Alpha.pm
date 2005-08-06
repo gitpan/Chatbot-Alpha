@@ -1,6 +1,6 @@
 package Chatbot::Alpha;
 
-our $VERSION = '1.5';
+our $VERSION = '1.61';
 
 # For debugging...
 use strict;
@@ -772,6 +772,9 @@ you could then add a trigger that would be called when nothing else could be fou
 
 =head1 CHANGES
 
+  Version 1.61
+  - Chatbot::Alpha::Sort completed.
+  
   Version 1.6
   - Created Chatbot::Alpha::Sort for sorting your Alpha documents.
   
