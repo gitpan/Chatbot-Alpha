@@ -3,11 +3,24 @@
 use lib "./lib";
 use Chatbot::Alpha;
 
-my $alpha = new Chatbot::Alpha (debug => 1);
+my $alpha = new Chatbot::Alpha (debug => 0);
+print "Chatbot::Alpha version $Chatbot::Alpha::VERSION\n\n";
 
 # Load test replies.
 my $load = $alpha->load_file ('./testreplies.txt');
 die "Error: $load" unless $load == 1;
+
+# Test the search feature.
+print "Testing search...\n"
+	. "\tFor: one\n";
+my @one = $alpha->search ("one");
+	print "\t\t" . join ("\n\t\t", @one);
+print "\n";
+print "\tFor: sorry\n";
+my @two = $alpha->search ("sorry");
+	print "\t\t" . join ("\n\t\t", @two);
+
+print "\n\n";
 
 # Stream additional replies.
 $alpha->stream ("+ what is alpha\n"
@@ -38,6 +51,8 @@ while (1) {
 
 	# Unset the "master" variable.
 	$alpha->remove_variable ("master");
+
+	$reply =~ s/\\n/\n/g;
 
 	print "Alpha> $reply\n\n";
 }

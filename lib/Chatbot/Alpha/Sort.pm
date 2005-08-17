@@ -471,8 +471,7 @@ are as follows:
      to cba
   files => SORT_TYPE
      The sorting method for which your new files will be sorted.
-     Currently the only supported SORT_TYPE is "alpha" -- alphabetic
-     sorting.
+     See below for the sort types.
 
 =head1 SORT TYPES (FILES)
 
@@ -498,7 +497,7 @@ in the OUT directory. Topics are written first.
 
 =head2 SEE ALSO
 
-Chatbot::Alpha
+L<Chatbot::Alpha>
 
 =head1 KNOWN BUGS
 

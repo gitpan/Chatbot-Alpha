@@ -1,13 +1,33 @@
 // Test Replies
 
+// Chatbot-Alpha 1.7 - A reply with continuation...
++ tell me a poem
+- Little Miss Muffet,\n
+  ^ sat on her tuffet,\n
+  ^ in a nonchalant sort of way.\n\n
+  ^ With her forcefield around her,\n
+  ^ the spider, the bounder\n
+  ^ is not in the picture today.
+
+// Chatbot-Alpha 1.7 - Check syntax errors on deep recursion.
++ one
+@ two
+
++ two
+@ one
+
 // A standard reply to "hello", with multiple responses.
 + hello
 - Hello there!
 - What's up?
 - This is random, eh?
 
+// A test of having two of the same trigger in different topics.
++ sorry
+- Why are you sorry?
+
 // A simple one-reply response to "what's up"
-+ what's up
++ whats up
 - Not much, you?
 
 // A test using <star1>

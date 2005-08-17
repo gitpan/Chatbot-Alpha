@@ -1,10 +1,13 @@
 package Chatbot::Alpha;
 
-our $VERSION = '1.61';
+our $VERSION = '1.70';
 
 # For debugging...
 use strict;
 use warnings;
+
+# Syntax checking
+use Chatbot::Alpha::Syntax;
 
 sub new {
 	my $proto = shift;
@@ -16,6 +19,10 @@ sub new {
 		version => $VERSION,
 		default => "I'm afraid I don't know how to reply to that!",
 		stream  => undef,
+		syntax  => new Chatbot::Alpha::Syntax(
+			syntax   => 'strict',
+			denytype => 'allow_all',
+		),
 		@_,
 	};
 
@@ -86,6 +93,9 @@ sub load_file {
 	# Open the file.
 	my @data = ();
 	if ($stream != 1) {
+		# Syntax check this.
+		$self->{syntax}->check ($file);
+
 		open (FILE, "$file") or return 0;
 		@data = <FILE>;
 		close (FILE);
@@ -109,6 +119,8 @@ sub load_file {
 		$self->debug ("Line $num: $line");
 		next if length $line == 0;
 		next if $line =~ /^\//;
+		$line =~ s/^\s+//g;
+		$line =~ s/^\t+//g;
 		$line =~ s/^\s//g;
 		$line =~ s/^\t//g;
 
@@ -154,6 +166,7 @@ sub load_file {
 
 			# Set the trigger's topic.
 			$self->{_replies}->{$topic}->{$trigger}->{topic} = $topic;
+			$self->{_syntax}->{$topic}->{$trigger}->{ref} = "$file line $num";
 		}
 		elsif ($command eq '-') {
 			$self->debug ("- Command - Reply Response!");
@@ -169,6 +182,12 @@ sub load_file {
 
 			$self->{_replies}->{$topic}->{$trigger}->{$counter} = $data;
 			$self->debug ("Reply #$counter : $data");
+			$self->{_syntax}->{$topic}->{$trigger}->{$counter}->{ref} = "$file line $num";
+		}
+		elsif ($command eq '^') {
+			$self->debug ("^ Command - Reply Continuation");
+			$data =~ s/^\s//g;
+			$self->{_replies}->{$topic}->{$trigger}->{$counter} .= $data;
 		}
 		elsif ($command eq '@') {
 			# A redirect.
@@ -180,6 +199,7 @@ sub load_file {
 			}
 			$data =~ s/^\s//g;
 			$self->{_replies}->{$topic}->{$trigger}->{redirect} = $data;
+			$self->{_syntax}->{$topic}->{$trigger}->{redirect}->{ref} = "$file line $num";
 		}
 		elsif ($command eq '*') {
 			# A conditional.
@@ -193,6 +213,7 @@ sub load_file {
 			$data =~ s/^\s//g;
 			$self->debug ("Counter: $counter");
 			$self->{_replies}->{$topic}->{$trigger}->{conditions}->{$counter} = $data;
+			$self->{_syntax}->{$topic}->{$trigger}->{conditions}->{$counter}->{ref} = "$file line $num";
 		}
 		elsif ($command eq '&') {
 			# A conversation holder.
@@ -207,6 +228,7 @@ sub load_file {
 			$data =~ s/^\s//g;
 			$self->debug ("Holder: $holder");
 			$self->{_replies}->{$topic}->{$trigger}->{convo}->{$holder} = $data;
+			$self->{_syntax}->{$topic}->{$trigger}->{convo}->{$holder}->{ref} = "$file line $num";
 			$holder++;
 		}
 		elsif ($command eq '#') {
@@ -222,6 +244,7 @@ sub load_file {
 			$data =~ s/^\s//g;
 			$self->debug ("System Command: $data");
 			$self->{_replies}->{$topic}->{$trigger}->{system}->{codes} .= $data;
+			$self->{_syntax}->{$topic}->{$trigger}->{system}->{codes}->{ref} = "$file line $num";
 		}
 	}
 
@@ -313,6 +336,50 @@ sub clear_variables {
 	return 1;
 }
 
+sub search {
+	my ($self,$msg) = @_;
+
+	my @results = ();
+
+	# Sort replies if it hasn't already been done.
+	if (!exists $self->{_array}) {
+		$self->sort_replies;
+	}
+
+	# Too many loops?
+	if ($self->{loops} >= 15) {
+		$self->{loops} = 0;
+		my $topic = 'random';
+		return "ERR: Deep Recursion (15+ loops in reply set) at $self->{_syntax}->{$topic}->{$msg}->{redirect}->{ref}";
+	}
+
+	my %star;
+	my $reply;
+
+	# Make sure some replies are loaded.
+	if (!exists $self->{_replies}) {
+		return "ERROR: No replies have been loaded!";
+	}
+
+	# Go through each reply.
+	foreach my $topic (keys %{$self->{_array}}) {
+		$self->debug ("On Topic: $topic");
+
+		foreach my $in (@{$self->{_array}->{$topic}}) {
+			$self->debug ("On Reply Trigger: $in");
+
+			if ($msg =~ /^$in$/i) {
+				# Add to the results.
+				my $t = $in;
+				$t =~ s/\(\.\*\?\)/\*/g;
+				push (@results, "+ $t (topic: $topic) at $self->{_syntax}->{$topic}->{$in}->{ref}");
+			}
+		}
+	}
+
+	return @results;
+}
+
 sub reply {
 	my ($self,$id,$msg) = @_;
 
@@ -324,7 +391,8 @@ sub reply {
 	# Too many loops?
 	if ($self->{loops} >= 15) {
 		$self->{loops} = 0;
-		return "ERR: Deep Recursion (15+ loops in reply set)";
+		my $topic = $self->{users}->{$id}->{topic} || 'random';
+		return "ERR: Deep Recursion (15+ loops in reply set) at $self->{_syntax}->{$topic}->{$msg}->{redirect}->{ref}";
 	}
 
 	my %star;
@@ -457,7 +525,7 @@ sub reply {
 					$self->{loops}++;
 					$reply = $replies [ int(rand(scalar(@replies))) ];
 					if ($self->{loops} >= 20) {
-						$reply = "ERR: Infinite Loop!";
+						$reply = "ERR: Infinite Loop near $self->{_syntax}->{$topic}->{$in}->{ref}";
 					}
 				}
 
@@ -609,6 +677,11 @@ Scans the loaded replies to find a response to MESSAGE. ID is a unique ID for th
 The ID is used for things such as topics and conversation holders. Returns a reply, or one of default_reply if a better
 response wasn't found.
 
+=head2 search (MESSAGE)
+
+Scans the loaded replies to find any triggers that match MESSAGE. Will return an array containing every trigger that
+matched the message, including their filenames and line numbers.
+
 =head1 ALPHA LANGUAGE TUTORIAL
 
 The Alpha response language is a line-by-line command-driven language. The first character on each line is the command
@@ -628,6 +701,11 @@ command. A single + and a single - will be a one-way question/answer scenario. I
 become random replies to the trigger. If conditionals are used, the -'s will be considered if each conditional is false.
 If a conversation holder is used, the - will be the first reply sent in the conversation. See the example code below
 for examples.
+
+=head2 ^ (Carat)
+
+The ^ symbol indicates a continuation of your last - reply. This command can only be used after a - command, and adds
+its arguments to the end of the arguments of the last - command. See the example code for an example.
 
 =head2 @ (At)
 
@@ -663,9 +741,29 @@ The > starts a labeled piece of code. At this time, the only label supported is 
 
 This command closes a label.
 
+=head2 / (Forward Slash)
+
+The / command is used for comments (actually two /'s is the standard, as in Java and C++).
+
 =head1 EXAMPLE ALPHA CODE
 
   // Test Replies
+
+  // Chatbot-Alpha 1.7 - A reply with continuation...
+  + tell me a poem
+  - Little Miss Muffet,\n
+    ^ sat on her tuffet,\n
+    ^ in a nonchalant sort of way.\n\n
+    ^ With her forcefield around her,\n
+    ^ the spider, the bounder\n
+    ^ is not in the picture today.
+
+  // Chatbot-Alpha 1.7 - Check syntax errors on deep recursion.
+  + one
+  @ two
+
+  + two
+  @ one
   
   // A standard reply to "hello", with multiple responses.
   + hello
@@ -754,6 +852,15 @@ topics. When in a topic, any triggers that aren't in that topic are not availabl
 reply matching. In this way, you can have the same trigger many times but under different
 topics without them interfering with one another.
 
+=head1 ERROR CATCHING
+
+With Chatbot::Alpha 1.7, the module keeps filenames and line numbers with each command it finds
+(kept in $alpha->{_syntax} in the same order as $alpha->{_replies}). In this way, internal errors
+such as deep recursion can return filenames and line numbers. See the example code for a way to
+provoke this error.
+
+  ERR: Deep Recursion (15+ loops in reply set) at ./testreplies.txt line 17
+
 =head1 TIPS AND TRICKS
 
 =head2 Things to do with default_reply
@@ -771,6 +878,14 @@ you could then add a trigger that would be called when nothing else could be fou
     no handler for repairing the topic.
 
 =head1 CHANGES
+
+  Version 1.7
+  - Chatbot::Alpha::Syntax added.
+  - ^ command added.
+  - Module keeps filenames and line numbers internally, so on internal
+    errors such as 'Deep Recursion' and 'Infinite Loop' it can point you
+    to the source of the problem.
+  - $alpha->search() method added.
 
   Version 1.61
   - Chatbot::Alpha::Sort completed.
@@ -813,7 +928,7 @@ you could then add a trigger that would be called when nothing else could be fou
 
 =head1 SEE ALSO
 
-Chatbot::Alpha::Sort
+L<Chatbot::Alpha::Sort>
 
 =head1 AUTHOR
 

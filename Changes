@@ -1,5 +1,13 @@
 Revision history for Perl extension Chatbot::Alpha.
 
+1.70  Wed Aug 17 13:47:35 2005
+        - Chatbot::Alpha::Syntax added.
+        - ^ command added.
+        - Module keeps filenames and line numbers internally, so on internal
+                errors such as 'Deep Recursion' and 'Infinite Loop' it can point you
+                to the source of the problem.
+        - $alpha->search() method added.
+
 1.61  Sat Aug  6 14:43:00 2005
         - Completed Chatbot::Alpha::Sort module.
 
