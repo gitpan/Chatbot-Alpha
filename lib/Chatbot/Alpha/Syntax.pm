@@ -154,13 +154,13 @@ sub check {
 		}
 		elsif ($cmd eq '@') {
 			if ($self->{syntax} eq 'strict') {
-				if ($data =~ /[^a-z0-9 \*]/) {
+				if ($data =~ /[^a-z0-9 \*\<\>]/) {
 					die "\@REDIRECTIONS must be lowercase alphanumeric "
 						. "while in 'strict' syntax at $file line $num; ";
 				}
 			}
 			elsif ($self->{syntax} eq 'loose') {
-				if ($data =~ /[^A-Za-z0-9 \*]/) {
+				if ($data =~ /[^A-Za-z0-9 \*\<\>]/) {
 					die "\@REDIRECTIONS must be alphanumeric while in 'loose' "
 						. "syntax at $file line $num; ";
 				}

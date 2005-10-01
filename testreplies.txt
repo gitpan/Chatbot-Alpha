@@ -42,6 +42,12 @@
 + who are you
 @ identify yourself
 
+// Wildcard Tests
++ my name is *
+- Nice to meet you <star1>.
++ i am * years old
+- Many people are <star1>.
+
 // Conditionals Test
 + am i your master
 * if master = 1::Yes, you are my master.

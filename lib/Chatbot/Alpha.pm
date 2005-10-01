@@ -1,10 +1,11 @@
 package Chatbot::Alpha;
 
-our $VERSION = '1.70';
+our $VERSION = '1.71';
 
 # For debugging...
 use strict;
 use warnings;
+use Data::Dumper;
 
 # Syntax checking
 use Chatbot::Alpha::Syntax;
@@ -281,6 +282,29 @@ sub sort_replies {
 
 	# Go through each reply.
 	foreach my $topic (keys %{$self->{_replies}}) {
+		# Sort by number of whole words.
+		my $sort = {
+			def => [],
+			0 => [],
+			1 => [],
+			2 => [],
+			3 => [],
+			4 => [],
+			5 => [],
+			6 => [],
+			7 => [],
+			8 => [],
+			9 => [],
+			10 => [],
+			11 => [],
+			12 => [],
+			13 => [],
+			14 => [],
+			15 => [],
+			16 => [],
+			unknown => [],
+		};
+
 		my @trigNorm = ();
 		my @trigWild = ();
 		foreach my $key (keys %{$self->{_replies}->{$topic}}) {
@@ -288,20 +312,56 @@ sub sort_replies {
 			$count++;
 			# If it's a wildcard...
 			if ($key =~ /\*/) {
+				# See how many full words it has.
+				my @words = split(/\s/, $key);
+				my $cnt = 0;
+				foreach my $word (@words) {
+					$word =~ s/\s//g;
+					next unless length $word;
+					if ($word !~ /\*/) {
+						# A whole word.
+						$cnt++;
+					}
+				}
+
 				# Save to wildcard array.
-				$self->debug ("Key $key is a wildcard!");
-				push (@trigWild, $key);
+				$self->debug ("Key $key has a wildcard ($cnt words)!");
+
+				if (exists $sort->{$cnt}) {
+					push (@{$sort->{$cnt}}, $key);
+				}
+				else {
+					push (@{$sort->{unknown}}, $key);
+				}
 			}
 			else {
 				# Save to normal array.
 				$self->debug ("Key $key is normal!");
-				push (@trigNorm, $key);
+				push (@{$sort->{def}}, $key);
 			}
 		}
-		# Order the array.
+
+		# Merge the arrays.
 		$self->{_array}->{$topic} = [
-			@trigNorm,
-			@trigWild,
+			@{$sort->{def}},
+			@{$sort->{16}},
+			@{$sort->{15}},
+			@{$sort->{14}},
+			@{$sort->{13}},
+			@{$sort->{12}},
+			@{$sort->{11}},
+			@{$sort->{10}},
+			@{$sort->{9}},
+			@{$sort->{8}},
+			@{$sort->{7}},
+			@{$sort->{6}},
+			@{$sort->{5}},
+			@{$sort->{4}},
+			@{$sort->{3}},
+			@{$sort->{2}},
+			@{$sort->{1}},
+			@{$sort->{unknown}},
+			@{$sort->{0}},
 		];
 	}
 
@@ -659,6 +719,10 @@ using pipes. See "Tips and Tricks" below for some clever ways to handle default_
 Sorts the replies already loaded: solid triggers go first, followed by triggers containing wildcards. If you fail to
 call this method yourself, it will be called automatically when "reply" is called.
 
+B<Update with v 7.1> - Reply sorting method reprogrammed: items are sorted with solid triggers first, then those with
+wildcards and 16 whole words, then 15 whole words, 14, etc. and then unknown triggers, followed lastly by those that
+contain NO full words.
+
 =head2 set_variable (VARIABLE, VALUE)
 
 Sets an internal variable. These are used primarily in conditionals in your Alpha responses.
@@ -878,6 +942,10 @@ you could then add a trigger that would be called when nothing else could be fou
     no handler for repairing the topic.
 
 =head1 CHANGES
+
+  Version 1.71
+  - Redid sorting method. Sometimes triggers such as I AM * would match
+    before I AM * YEARS OLD.
 
   Version 1.7
   - Chatbot::Alpha::Syntax added.

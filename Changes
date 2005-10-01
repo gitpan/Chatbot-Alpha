@@ -1,5 +1,8 @@
 Revision history for Perl extension Chatbot::Alpha.
 
+1.71  Sat Oct  1 14:01:00 2005
+	- Sorting method reprogrammed for more efficient sorting.
+
 1.70  Wed Aug 17 13:47:35 2005
         - Chatbot::Alpha::Syntax added.
         - ^ command added.

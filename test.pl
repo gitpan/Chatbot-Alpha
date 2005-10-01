@@ -1,24 +1,25 @@
 #!/usr/bin/perl -w
 
 use lib "./lib";
+use Data::Dumper;
 use Chatbot::Alpha;
 
-my $alpha = new Chatbot::Alpha (debug => 0);
+my $alpha = new Chatbot::Alpha (debug => 1);
 print "Chatbot::Alpha version $Chatbot::Alpha::VERSION\n\n";
 
 # Load test replies.
 my $load = $alpha->load_file ('./testreplies.txt');
 die "Error: $load" unless $load == 1;
 
-# Test the search feature.
-print "Testing search...\n"
-	. "\tFor: one\n";
-my @one = $alpha->search ("one");
-	print "\t\t" . join ("\n\t\t", @one);
-print "\n";
-print "\tFor: sorry\n";
-my @two = $alpha->search ("sorry");
-	print "\t\t" . join ("\n\t\t", @two);
+ Test the search feature.
+ print "Testing search...\n"
+ 	. "\tFor: one\n";
+ my @one = $alpha->search ("one");
+ 	print "\t\t" . join ("\n\t\t", @one);
+ print "\n";
+ print "\tFor: sorry\n";
+ my @two = $alpha->search ("sorry");
+ 	print "\t\t" . join ("\n\t\t", @two);
 
 print "\n\n";
 
@@ -27,6 +28,10 @@ $alpha->stream ("+ what is alpha\n"
 	. "- Alpha, aka Chatbot::Alpha, is a chatterbot brain created by AiChaos Inc.\n\n"
 	. "+ who created alpha\n"
 	. "- Chatbot::Alpha was created by Cerone Kirsle.");
+
+print "\n\n\n\n";
+
+$alpha->sort_replies;
 
 # User ID (so the module can keep track of different talkers)
 my $id = "foo";
