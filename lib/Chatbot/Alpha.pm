@@ -49,7 +49,7 @@ sub debug {
 	return 1;
 }
 
-sub load_folder {
+sub loadFolder {
 	my ($self,$dir) = (shift,shift);
 	my $type = shift || undef;
 
@@ -62,7 +62,7 @@ sub load_folder {
 			}
 		}
 
-		my $load = $self->load_file ("$dir/$file");
+		my $load = $self->loadFile ("$dir/$file");
 		return $load unless $load == 1;
 	}
 	closedir (DIR);
@@ -81,15 +81,15 @@ sub stream {
 
 	# Stream the code.
 	$self->{stream} = $code;
-	$self->load_file (undef,1);
+	$self->loadFile (undef,1);
 }
 
-sub load_file {
+sub loadFile {
 	my ($self,$file,$stream) = @_;
 	$stream = 0 unless defined $stream;
 	$stream = 0 if defined $file;
 
-	$self->debug ("load_file called for file: $file");
+	$self->debug ("loadFile called for file: $file");
 
 	# Open the file.
 	my @data = ();
@@ -149,6 +149,11 @@ sub load_file {
 		elsif ($command eq '+') {
 			$self->debug ("+ Command - Reply Trigger!");
 			if ($inReply == 1) {
+				# Reset the topics?
+				if ($topic =~ /^_that_/i) {
+					$topic = 'random';
+				}
+
 				# New reply.
 				$inReply = 0;
 				$trigger = '';
@@ -168,6 +173,20 @@ sub load_file {
 			# Set the trigger's topic.
 			$self->{_replies}->{$topic}->{$trigger}->{topic} = $topic;
 			$self->{_syntax}->{$topic}->{$trigger}->{ref} = "$file line $num";
+		}
+		elsif ($command eq '%') {
+			$self->debug ("% Command - That!");
+			if ($inReply != 1) {
+				# Error.
+				$self->debug ("Syntax error at $file line $num");
+				return -2;
+			}
+
+			# That tag.
+			$data =~ s/^\s//g;
+
+			# Set the topic to "_that_$data"
+			$topic = "_that_$data";
 		}
 		elsif ($command eq '-') {
 			$self->debug ("- Command - Reply Response!");
@@ -252,16 +271,7 @@ sub load_file {
 	return 1;
 }
 
-sub default_reply {
-	my ($self,$reply) = @_;
-
-	return 0 if length $reply == 0;
-
-	# Save the reply.
-	$self->{default} = $reply;
-}
-
-sub sort_replies {
+sub sortReplies {
 	my $self = shift;
 
 	# Reset loop.
@@ -372,7 +382,7 @@ sub sort_replies {
 	return 1;
 }
 
-sub set_variable {
+sub setVariable {
 	my ($self,$var,$value) = @_;
 	return 0 unless defined $var;
 	return 0 unless defined $value;
@@ -381,7 +391,7 @@ sub set_variable {
 	return 1;
 }
 
-sub remove_variable {
+sub removeVariable {
 	my ($self,$var) = @_;
 	return 0 unless defined $var;
 
@@ -389,7 +399,7 @@ sub remove_variable {
 	return 1;
 }
 
-sub clear_variables {
+sub clearVariables {
 	my $self = shift;
 
 	delete $self->{vars};
@@ -403,7 +413,7 @@ sub search {
 
 	# Sort replies if it hasn't already been done.
 	if (!exists $self->{_array}) {
-		$self->sort_replies;
+		$self->sortReplies;
 	}
 
 	# Too many loops?
@@ -445,7 +455,7 @@ sub reply {
 
 	# Sort replies if it hasn't already been done.
 	if (!exists $self->{_array}) {
-		$self->sort_replies;
+		$self->sortReplies;
 	}
 
 	# Too many loops?
@@ -461,7 +471,8 @@ sub reply {
 	# Topics?
 	$self->{users}->{$id}->{topic} ||= 'random';
 
-	$self->{users}->{$id}->{last} = '0' unless exists $self->{users}->{$id}->{last};
+	$self->{users}->{$id}->{last} = '' unless exists $self->{users}->{$id}->{last};
+	$self->{users}->{$id}->{that} = '' unless exists $self->{users}->{$id}->{that};
 
 	$self->debug ("User Topic: $self->{users}->{$id}->{topic}");
 
@@ -472,10 +483,38 @@ sub reply {
 		return "ERROR: No replies have been loaded!";
 	}
 
+	# See if this topic has any "that's" associated with it.
+	my $thatTopic = "_that_$self->{users}->{$id}->{that}";
+	my $isThat = 0;
+	my $keepTopic = '';
+
 	# Go through each reply.
 	foreach my $topic (keys %{$self->{_array}}) {
 		$self->debug ("On Topic: $topic");
+
+		print "Debug // thatTopic = $thatTopic\n"
+			. "\tisThat = $isThat\n"
+			. "\tkeepTopic = $keepTopic\n"
+			. "\tlast reply = $self->{users}->{$id}->{that}\n";
+#			. "\t$self->{_array}->{$thatTopic}->{sorry}\n";
+
+		my $lastSent = $self->{users}->{$id}->{that};
+
+		if ($isThat != 1 && length $lastSent > 0 && exists $self->{_replies}->{$thatTopic}->{$msg}) {
+			# It does exist. Set this as the topic so this reply should be matched.
+			$isThat = 1;
+			$keepTopic = $self->{users}->{$id}->{topic};
+			$self->{users}->{$id}->{topic} = $thatTopic;
+
+			print "Debug // lastSent true\n"
+				. "\tisThat = $isThat\n"
+				. "\tkeepTopic = $keepTopic\n"
+				. "\tuser topic = $self->{users}->{$id}->{topic}\n";
+		}
+
 		next unless $topic eq $self->{users}->{$id}->{topic};
+
+		print "Debug // This IS user's topic\n";
 
 		foreach my $in (@{$self->{_array}->{$topic}}) {
 			$self->debug ("On Reply Trigger: $in");
@@ -548,22 +587,17 @@ sub reply {
 						my $conditional = $self->{_replies}->{$topic}->{$in}->{conditions}->{$c};
 						my ($condition,$happens) = split(/::/, $conditional, 2);
 						$self->debug ("Condition: $condition");
-						my @con = split(/ /, $condition, 4);
-						$self->debug ("\@con = " . join (",", @con));
-						$con[0] = lc($con[0]);
-						if ($con[0] eq "if") {
-							$self->debug ("A well-formed conditional.");
-							# A good conditional.
-							# ... see if the variable was defined.
-							if (exists $self->{vars}->{$con[1]}) {
-								$self->debug ("Variable asked for exists!");
-								# Check values.
-								if ($self->{vars}->{$con[1]} eq $con[3]) {
-									$self->debug ("Values match!");
-									# True. This is the reply.
-									$reply = $happens;
-									$self->debug ("Reply = $reply");
-								}
+						my ($var,$value) = split(/=/, $condition, 2);
+						$self->debug ("var = $var; value = $value");
+
+						if (exists $self->{vars}->{$var}) {
+							$self->debug ("Variable asked for exists!");
+							# Check values.
+							if (($var =~ /^[0-9]/ && $self->{vars}->{$var} eq $value) || ($self->{vars}->{$var} eq $value)) {
+								$self->debug ("Values match!");
+								# True. This is the reply.
+								$reply = $happens;
+								$self->debug ("Reply = $reply");
 							}
 						}
 					}
@@ -600,6 +634,13 @@ sub reply {
 		}
 	}
 
+	# Reset "That" topics.
+	if ($isThat == 1) {
+		print "Debug // Resetting THAT topic to $keepTopic.\n";
+		$self->{users}->{$id}->{topic} = $keepTopic;
+		$self->{users}->{$id}->{that} = '<<undef>>';
+	}
+
 	# A reply?
 	if (defined $reply) {
 		# Filter in stars...
@@ -631,8 +672,27 @@ sub reply {
 		$reply =~ s/\{topic=(.*?)\}//g;
 	}
 
+	# Sub-replies?
+	while ($reply =~ /\{\@(.*?)\}/i) {
+		my $o = $1;
+		my $trig = $o;
+		$trig =~ s/^\s+//g;
+		$trig =~ s/\s$//g;
+
+		my $resp = $self->reply ($id,$trig);
+
+		$reply =~ s/\{\@$o\}/$resp/i;
+	}
+
+	# Format the bot's reply.
+	my $simple = lc($reply);
+	$simple =~ s/[^A-Za-z0-9 ]//g;
+	$simple =~ s/^\s+//g;
+	$simple =~ s/\s$//g;
+
 	# Save this message.
 	$self->debug ("Saving this as last msg...");
+	$self->{users}->{$id}->{that} = $simple;
 	$self->{users}->{$id}->{last} = $msg;
 	$self->{users}->{$id}->{hold} ||= 0;
 
@@ -659,10 +719,10 @@ Chatbot::Alpha - A simple chatterbot brain.
   my $alpha = new Chatbot::Alpha();
   
   # Load replies from a directory.
-  $alpha->load_folder ("./replies");
+  $alpha->loadFolder ("./replies");
   
   # Load an additional response file.
-  $alpha->load_file ("./more_replies.txt");
+  $alpha->loadFile ("./more_replies.txt");
   
   # Input even more replies directly from Perl.
   $alpha->stream ("+ what is alpha\n"
@@ -691,16 +751,16 @@ Returns a Chatbot::Alpha instance.
 
 Returns the version number of the module.
 
-=head2 load_folder (DIRECTORY[, TYPES])
+=head2 loadFolder (DIRECTORY[, TYPES])
 
 Loads a directory of response files. The directory name is required. TYPES is the file extension of your response files.
 If TYPES is omitted, every file is considered a response file.
 
 Just as a side note, the extension agreed upon for Alpha files is .CBA, but the extension is not important.
 
-=head2 load_file (FILE_PATH[, STREAM])
+=head2 loadFile (FILE_PATH[, STREAM])
 
-Loads a single file. The "load_folder" method calls this for each valid file. If STREAM is 1, the current contents of
+Loads a single file. The "loadFolder" method calls this for each valid file. If STREAM is 1, the current contents of
 the stream cache will be loaded (assuming FILE_PATH is omitted). You shouldn't need to worry about using STREAM, see
 the "stream" method below.
 
@@ -709,12 +769,7 @@ the "stream" method below.
 Inputs a set of Alpha code directly into the module ("streaming") rather than loading it from an external document.
 See synopsis for an example.
 
-=head2 default_reply (RANDOM|RANDOM|RANDOM)
-
-Sets up a default response in case there is no trigger for the message in your reply code. Separate random replies
-using pipes. See "Tips and Tricks" below for some clever ways to handle default_reply.
-
-=head2 sort_replies
+=head2 sortReplies
 
 Sorts the replies already loaded: solid triggers go first, followed by triggers containing wildcards. If you fail to
 call this method yourself, it will be called automatically when "reply" is called.
@@ -723,15 +778,15 @@ B<Update with v 7.1> - Reply sorting method reprogrammed: items are sorted with 
 wildcards and 16 whole words, then 15 whole words, 14, etc. and then unknown triggers, followed lastly by those that
 contain NO full words.
 
-=head2 set_variable (VARIABLE, VALUE)
+=head2 setVariable (VARIABLE, VALUE)
 
 Sets an internal variable. These are used primarily in conditionals in your Alpha responses.
 
-=head2 remove_variable (VARIABLE)
+=head2 removeVariable (VARIABLE)
 
 Removes an internal variable.
 
-=head2 clear_variables
+=head2 clearVariables
 
 Clears all internal variables (only those set with set_variable).
 
@@ -757,6 +812,11 @@ follows:
 The + symbol indicates a trigger. Every Alpha reply begins with this command. The arguments are what the trigger is
 (i.e. "hello chatbot"). If the message matches this trigger, then the rest of the response code is considered. Else,
 the triggers are skipped over until a good match is found for the message.
+
+=head2 % (Percent)
+
+This is used as a "that" -- that is, an emulation of the <that> tag in AIML. The value of this would be Alpha's last
+reply, lowercase and without any punctuation. There's an example of this in the example reply code below.
 
 =head2 - (Minus)
 
@@ -809,9 +869,39 @@ This command closes a label.
 
 The / command is used for comments (actually two /'s is the standard, as in Java and C++).
 
+=head1 ALPHA TAGS
+
+These tags can be used within Alpha -REPLIES, some of which may be used also in @REDIRECTS.
+
+=head2 {topic=...}
+
+Sets a topic. Set topic to B<random> to return to the default topic.
+
+=head2 {@trigger}
+
+Include a redirection within another response. Example:
+
+  + * or something
+  - Or something. {@<star1>}
+  
+  "Your stupid or something?"
+  "Or something. At least I know the difference between "your" and "you're.""
+
+=head2 <msg>
+
+This can only be used in &HOLDERS, it inserts the user's message (for example a knock-knock joke convo).
+
 =head1 EXAMPLE ALPHA CODE
 
   // Test Replies
+
+  // Chatbot-Alpha 2.0 - Mid-sentence redirections.
+  + redirect test
+  - If you said hello I would've said: {@hello} But if you said whats up I'd say: {@whats up}
+
+  // Redirect test with <star1>.
+  + i say *
+  - Indeed you do say. {@<star1>}
 
   // Chatbot-Alpha 1.7 - A reply with continuation...
   + tell me a poem
@@ -828,44 +918,66 @@ The / command is used for comments (actually two /'s is the standard, as in Java
 
   + two
   @ one
-  
+
   // A standard reply to "hello", with multiple responses.
   + hello
   - Hello there!
   - What's up?
   - This is random, eh?
-  
+
+  // A "that" test.
+  + i hate you
+  - You're really mean... =(
+
+  + sorry
+  % youre really mean
+  - Don't worry--it's okay. :-)
+
+  // A test of having two of the same trigger in different topics.
+  + sorry
+  - Why are you sorry?
+
   // A simple one-reply response to "what's up"
-  + what's up
+  + whats up
   - Not much, you?
-  
+
   // A test using <star1>
   + say *
   - Um.... "<star1>"
-  
+
   // This reply is referred to below.
   + identify yourself
   - I am Alpha.
-  
+
   // Refers the asker back to the reply above.
   + who are you
   @ identify yourself
-  
-  // Conditionals Test
+
+  // Wildcard Tests
+  + my name is *
+  - Nice to meet you <star1>.
+  + i am * years old
+  - Many people are <star1>.
+
+  // Conditionals Tests
   + am i your master
-  * if master = 1::Yes, you are my master.
+  * master=1::Yes, you are my master.
   - No, you are not my master.
-  
+
+  + is my name bob
+  * name=bob::Yes, that's your name.
+  - No your name is not Bob.
+
   // Perl Evaluation Test
   + what is 2 plus 2
   # $reply = "2 + 2 = 4";
-  
+
   // A Conversation Holder: Knock Knock!
   + knock knock
   - Who's there?
   & <msg> who?
   & Ha! <msg>! That's a good one!
-  
+
   // A Conversation Holder: Rambling!
   + are you crazy
   - I was crazy once.
@@ -873,20 +985,27 @@ The / command is used for comments (actually two /'s is the standard, as in Java
   & In a room with padded walls.
   & There were rats there...
   & Did I mention I was crazy once?
-  
+
   // Topic Test
   + you suck
   - And you're very rude. Apologize now!{topic=apology}
-  
+
+  // 1.71 Test - Single wildcards should sort LAST, so this could be
+  // used as a "I can't reply to that" reply.
+  + *
+  - Hm, I'm going to have to think about that one for a minute.
+  - I'm sorry, but I can't answer that!
+  - I really don't know what to say to that one...
+
   > topic apology
-  
-     + *
-     - No, apologize for being so rude to me.
-  
-     // Set {topic=random} to return to the default topic.
-     + sorry
-     - See, that wasn't too hard. I'll forgive you.{topic=random}
-  
+
+    + *
+    - No, apologize for being so rude to me.
+
+    // Set {topic=random} to return to the default topic.
+    + sorry
+    - See, that wasn't too hard. I'll forgive you.{topic=random}
+
   < topic
 
 =head1 TOPICS
@@ -925,14 +1044,34 @@ provoke this error.
 
   ERR: Deep Recursion (15+ loops in reply set) at ./testreplies.txt line 17
 
-=head1 TIPS AND TRICKS
+=head1 CHATBOT-ALPHA 2.X
 
-=head2 Things to do with default_reply
+The following changes have been made from Chatbot-Alpha 1.x to 2.x
 
-One trick you can do with default_reply is set it to something totally random like "alpha no reply matched".
-When you're getting a reply, if the reply turns out to be "alpha no reply matched" you can go back into
-Alpha with another reply call, but call something like "wildcard" as the trigger. In your response code,
-you could then add a trigger that would be called when nothing else could be found.
+  - Methods have been renamed:
+    load_folder     => loadFolder
+    load_file       => loadFile
+    sort_replies    => sortReplies
+    set_variable    => setVariable
+    remove_variable => removeVariable
+    clear_variables => clearVariables
+
+  - Methods that have been REMOVED:
+    default_reply*
+
+  - Alpha commands added:
+    %THAT
+
+  - Alpha commands changed:
+    *CONDITION
+    New format:
+      *VAR=VALUE::REPLY
+
+  * Set a trigger of just an asterisk to set up a fallback for when no better
+    response is found. Example:
+
+    + *
+    - I don't know how to reply to your message!
 
 =head1 KNOWN BUGS
 
@@ -942,6 +1081,24 @@ you could then add a trigger that would be called when nothing else could be fou
     no handler for repairing the topic.
 
 =head1 CHANGES
+
+  Version 2.00
+  - Added some AIML emulation:
+    - In-reply redirections (like <srai>):
+         + * or something
+         - Or something. {@<star1>}
+    - "That" kind of support.
+         + i hate you
+         - You're really mean... =(
+
+         + sorry
+         % youre really mean
+         - Don't worry--it's okay. :-)
+  - Renamed all methods to be alternatingCaps instead of with underscores.
+  - Chatbot::Alpha::Syntax supports the newly-added commands.
+  - Fixed conditionals, should work more efficiently now:
+    - Format changed to *VARIABLE=VALUE::HAPPENS
+    - Does numeric == for numbers, or eq for strings... = better matching.
 
   Version 1.71
   - Redid sorting method. Sometimes triggers such as I AM * would match
@@ -957,44 +1114,32 @@ you could then add a trigger that would be called when nothing else could be fou
 
   Version 1.61
   - Chatbot::Alpha::Sort completed.
-  
+
   Version 1.6
   - Created Chatbot::Alpha::Sort for sorting your Alpha documents.
-  
+
   Version 1.5
   - Added "stream" method, revised POD.
-  
+
   Version 1.4
   - Fixed bug with wildcard subsitutitons.
-  
+
   Version 1.3
   - Added the ">" and "<" commands, now used for topics.
-  
+
   Version 1.2
-  - "sort_replies" method added
-  
+  - "sortReplies" method added
+
   Version 1.1
   - Fixed a bug in reply matching with wildcards.
   - Added a "#" command for executing System Commands.
-  
+
   Version 1.0
   - Initial release.
 
-=head1 FUTURE PLANS
-
-  - Add a command for long responses so that they can continue on multiple
-    lines. For example:
-  
-       + hello bot
-       - Hello there human. This reply is_
-         ^ very very long and needs to span_
-         ^ across multiple lines.
-  
-  - Create a Chatbot::Alpha::Sort module for taking your already existing external
-    Alpha documents and sorting the triggers, i.e. to make them alphabetic, like
-    standard AIML is.
-
 =head1 SEE ALSO
+
+L<Chatbot::Alpha::Tutorial>
 
 L<Chatbot::Alpha::Sort>
 

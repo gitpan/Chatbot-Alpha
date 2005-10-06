@@ -142,6 +142,21 @@ sub check {
 				}
 			}
 		}
+		elsif ($cmd eq '%') {
+			# On strict: must be lowercase, simplistic.
+			if ($self->{syntax} eq 'strict') {
+				if ($data =~ /[^a-z0-9 ]/) {
+					die "+TRIGGERS must be lowercase alphanumeric "
+						. "while in 'strict' syntax at $file line $num; ";
+				}
+			}
+			elsif ($self->{syntax} eq 'loose') {
+				if ($data =~ /[^A-Za-z0-9 ]/) {
+					warn "+TRIGGERS must be alphanumeric while in 'loose' "
+						. "syntax at $file line $num; ";
+				}
+			}
+		}
 		elsif ($cmd eq '-') {
 			if (length $data == 0) {
 				die "Empty -RESPONSE data at $file line $num; ";
@@ -167,7 +182,7 @@ sub check {
 			}
 		}
 		elsif ($cmd eq '*') {
-			if ($data !~ /^if (.*?) = (.*?)::(.*?)$/i) {
+			if ($data !~ /^(.*?)=(.*?)::(.*?)$/i) {
 				die "Syntax error at *CONDITION at $file line $num; ";
 			}
 		}

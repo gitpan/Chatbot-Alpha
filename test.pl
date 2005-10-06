@@ -8,18 +8,8 @@ my $alpha = new Chatbot::Alpha (debug => 1);
 print "Chatbot::Alpha version $Chatbot::Alpha::VERSION\n\n";
 
 # Load test replies.
-my $load = $alpha->load_file ('./testreplies.txt');
+my $load = $alpha->loadFile ('./testreplies.txt');
 die "Error: $load" unless $load == 1;
-
- Test the search feature.
- print "Testing search...\n"
- 	. "\tFor: one\n";
- my @one = $alpha->search ("one");
- 	print "\t\t" . join ("\n\t\t", @one);
- print "\n";
- print "\tFor: sorry\n";
- my @two = $alpha->search ("sorry");
- 	print "\t\t" . join ("\n\t\t", @two);
 
 print "\n\n";
 
@@ -31,10 +21,26 @@ $alpha->stream ("+ what is alpha\n"
 
 print "\n\n\n\n";
 
-$alpha->sort_replies;
+$alpha->sortReplies;
 
 # User ID (so the module can keep track of different talkers)
 my $id = "foo";
+
+print "Setting Variables Test\n"
+	. "Botmaster? [1|0] or <0> ";
+my $bm = <STDIN>;
+print "Name? or <user> ";
+my $name = <STDIN>;
+
+$bm ||= 0;
+$name ||= 'user';
+
+chomp $bm;
+chomp $name;
+$name = lc($name);
+
+$alpha->setVariable ("master",$bm);
+$alpha->setVariable ("name",$name);
 
 # Loop.
 while (1) {
@@ -44,18 +50,8 @@ while (1) {
 
 	exit(0) if $msg =~ /^exit$/i;
 
-	# An example, setting a variable (see the "am i your master" reply in testreplies.txt)
-	# Try setting this to 0 and see how Alpha replies to that. =)
-	my $master = 1;
-
-	# Set the "master" variable.
-	$alpha->set_variable ("master",$master);
-
 	# Get a reply.
 	my $reply = $alpha->reply ($id,$msg);
-
-	# Unset the "master" variable.
-	$alpha->remove_variable ("master");
 
 	$reply =~ s/\\n/\n/g;
 

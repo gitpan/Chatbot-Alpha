@@ -8,3 +8,4 @@ t/Chatbot-Alpha.t
 lib/Chatbot/Alpha.pm
 lib/Chatbot/Alpha/Sort.pm
 lib/Chatbot/Alpha/Syntax.pm
+lib/Chatbot/Alpha/Tutorial.pm

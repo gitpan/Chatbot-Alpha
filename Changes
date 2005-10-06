@@ -1,5 +1,23 @@
 Revision history for Perl extension Chatbot::Alpha.
 
+2.00  Thu Oct  6 18:53:00 2005
+	- Added some AIML emulation:
+		- In-reply redirections (like <srai>):
+			+ * or something
+			- Or something. {@<star1>}
+	- "That" kind of support.
+		+ i hate you
+		- You're really mean... =(
+
+		+ sorry
+		% youre really mean
+		- Don't worry--it's okay. :-)
+	- Renamed all methods to be alternatingCaps instead of with underscores.
+	- Chatbot::Alpha::Syntax supports the newly-added commands.
+	- Fixed conditionals, should work more efficiently now:
+		- Format changed to *VARIABLE=VALUE::HAPPENS
+		- Does numeric == for numbers, or eq for strings... = better matching.
+
 1.71  Sat Oct  1 14:01:00 2005
 	- Sorting method reprogrammed for more efficient sorting.
 
