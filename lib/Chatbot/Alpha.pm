@@ -1,6 +1,6 @@
 package Chatbot::Alpha;
 
-our $VERSION = '1.71';
+our $VERSION = '2.02';
 
 # For debugging...
 use strict;
@@ -24,6 +24,7 @@ sub new {
 			syntax   => 'strict',
 			denytype => 'allow_all',
 		),
+		verify  => 1,
 		@_,
 	};
 
@@ -95,7 +96,9 @@ sub loadFile {
 	my @data = ();
 	if ($stream != 1) {
 		# Syntax check this.
-		$self->{syntax}->check ($file);
+		if ($self->{verify} == 1) {
+			$self->{syntax}->check ($file);
+		}
 
 		open (FILE, "$file") or return 0;
 		@data = <FILE>;
@@ -111,6 +114,7 @@ sub loadFile {
 	my $inReply = 0;
 	my $trigger = '';
 	my $counter = 0;
+	my $ccount = 0; # Conditions counter
 	my $holder = 0;
 	my $num = 0;
 
@@ -231,9 +235,10 @@ sub loadFile {
 			}
 			# Get the conditional's data.
 			$data =~ s/^\s//g;
-			$self->debug ("Counter: $counter");
-			$self->{_replies}->{$topic}->{$trigger}->{conditions}->{$counter} = $data;
-			$self->{_syntax}->{$topic}->{$trigger}->{conditions}->{$counter}->{ref} = "$file line $num";
+			$self->debug ("Counter: $ccount");
+			$self->{_replies}->{$topic}->{$trigger}->{conditions}->{$ccount} = $data;
+			$self->{_syntax}->{$topic}->{$trigger}->{conditions}->{$ccount}->{ref} = "$file line $num";
+			$ccount++;
 		}
 		elsif ($command eq '&') {
 			# A conversation holder.
@@ -458,6 +463,14 @@ sub reply {
 		$self->sortReplies;
 	}
 
+	# Create history.
+	if (!exists $self->{users}->{$id}->{history}) {
+		$self->{users}->{$id}->{history}->{input} = [ '', 'undefined', 'undefined', 'undefined', 'undefined',
+			'undefined', 'undefined', 'undefined', 'undefined', 'undefined' ];
+		$self->{users}->{$id}->{history}->{reply} = [ '', 'undefined', 'undefined', 'undefined', 'undefined',
+			'undefined', 'undefined', 'undefined', 'undefined', 'undefined' ];
+	}
+
 	# Too many loops?
 	if ($self->{loops} >= 15) {
 		$self->{loops} = 0;
@@ -492,12 +505,6 @@ sub reply {
 	foreach my $topic (keys %{$self->{_array}}) {
 		$self->debug ("On Topic: $topic");
 
-		print "Debug // thatTopic = $thatTopic\n"
-			. "\tisThat = $isThat\n"
-			. "\tkeepTopic = $keepTopic\n"
-			. "\tlast reply = $self->{users}->{$id}->{that}\n";
-#			. "\t$self->{_array}->{$thatTopic}->{sorry}\n";
-
 		my $lastSent = $self->{users}->{$id}->{that};
 
 		if ($isThat != 1 && length $lastSent > 0 && exists $self->{_replies}->{$thatTopic}->{$msg}) {
@@ -505,16 +512,9 @@ sub reply {
 			$isThat = 1;
 			$keepTopic = $self->{users}->{$id}->{topic};
 			$self->{users}->{$id}->{topic} = $thatTopic;
-
-			print "Debug // lastSent true\n"
-				. "\tisThat = $isThat\n"
-				. "\tkeepTopic = $keepTopic\n"
-				. "\tuser topic = $self->{users}->{$id}->{topic}\n";
 		}
 
 		next unless $topic eq $self->{users}->{$id}->{topic};
-
-		print "Debug // This IS user's topic\n";
 
 		foreach my $in (@{$self->{_array}->{$topic}}) {
 			$self->debug ("On Reply Trigger: $in");
@@ -568,6 +568,8 @@ sub reply {
 					for (my $s = 0; $s <= 9; $s++) {
 						$redirect =~ s/<star$s>/$star{$s}/ig;
 					}
+
+					$redirect =~ s/<star>/$star{1}/ig if exists $star{1};
 
 					$self->{loops}++;
 					$reply = $self->reply ($id,$redirect);
@@ -636,7 +638,6 @@ sub reply {
 
 	# Reset "That" topics.
 	if ($isThat == 1) {
-		print "Debug // Resetting THAT topic to $keepTopic.\n";
 		$self->{users}->{$id}->{topic} = $keepTopic;
 		$self->{users}->{$id}->{that} = '<<undef>>';
 	}
@@ -648,6 +649,7 @@ sub reply {
 		for ($i = 1; $i <= 9; $i++) {
 			$reply =~ s/<star$i>/$star{$i}/ig;
 		}
+		$reply =~ s/<star>/$star{1}/ig if exists $star{1};
 		$reply =~ s/<msg>/$star{msg}/ig if exists $star{msg};
 	}
 	else {
@@ -658,6 +660,23 @@ sub reply {
 		else {
 			$reply = $self->{default};
 		}
+	}
+
+	# History tags.
+	$reply =~ s/<input(\d)>/$self->{users}->{$id}->{history}->{input}->[$1]/g;
+	$reply =~ s/<reply(\d)>/$self->{users}->{$id}->{history}->{reply}->[$1]/g;
+
+	# String modifiers.
+	while ($reply =~ /\{(formal|uppercase|lowercase|sentence)\}(.*?)\{\/(formal|uppercase|lowercase|sentence)\}/i) {
+		my ($type,$string) = ($1,$2);
+		print "Found string tag $type\nstring = $string\n";
+		$type = lc($type);
+		my $o = $string;
+		$string = &stringUtil ($type,$string);
+		$o =~ s/([^A-Za-z0-9 =<>])/\\$1/g;
+		print "final string = $string\no = $o\n";
+		$reply =~ s/\{$type\}$o\{\/$type\}/$string/ig;
+		print "new reply = $reply\n\n";
 	}
 
 	# A topic setter?
@@ -684,6 +703,16 @@ sub reply {
 		$reply =~ s/\{\@$o\}/$resp/i;
 	}
 
+	# Update history.
+	shift (@{$self->{users}->{$id}->{history}->{input}});
+	shift (@{$self->{users}->{$id}->{history}->{reply}});
+	unshift (@{$self->{users}->{$id}->{history}->{input}}, $msg);
+	unshift (@{$self->{users}->{$id}->{history}->{reply}}, $reply);
+	unshift (@{$self->{users}->{$id}->{history}->{input}}, '');
+	unshift (@{$self->{users}->{$id}->{history}->{reply}}, '');
+	pop (@{$self->{users}->{$id}->{history}->{input}});
+	pop (@{$self->{users}->{$id}->{history}->{reply}});
+
 	# Format the bot's reply.
 	my $simple = lc($reply);
 	$simple =~ s/[^A-Za-z0-9 ]//g;
@@ -702,6 +731,33 @@ sub reply {
 	# There SHOULD be a reply now.
 	# So, return it.
 	return $reply;
+}
+
+sub stringUtil {
+	my ($type,$string) = @_;
+
+	if ($type eq 'uppercase') {
+		return uc($string);
+	}
+	elsif ($type eq 'lowercase') {
+		return lc($string);
+	}
+	elsif ($type eq 'sentence') {
+		$string = lc($string);
+		return ucfirst($string);
+	}
+	elsif ($type eq 'formal') {
+		$string = lc($string);
+		my @words = split(/ /, $string);
+		my @out = ();
+		foreach my $word (@words) {
+			push (@out, ucfirst($word));
+		}
+		return join (" ", @out);
+	}
+	else {
+		return $string;
+	}
 }
 
 1;
@@ -742,8 +798,8 @@ command-driven. Alpha is a simplistic brain yet is very powerful for making impr
 
 =head2 new (ARGUMENTS)
 
-Creates a new Chatbot::Alpha object. Pass in any default arguments (in hash form). Avoid arguments with underscores
-and the "stream" key. These are reserved.
+Creates a new Chatbot::Alpha object. Pass in any default arguments (in hash form). Default arguments are
+B<debug> (debug mode; defaults to 0) and B<verify> (to run syntax checking, defaults to 1).
 
 Returns a Chatbot::Alpha instance.
 
@@ -774,7 +830,7 @@ See synopsis for an example.
 Sorts the replies already loaded: solid triggers go first, followed by triggers containing wildcards. If you fail to
 call this method yourself, it will be called automatically when "reply" is called.
 
-B<Update with v 7.1> - Reply sorting method reprogrammed: items are sorted with solid triggers first, then those with
+B<Update with v 1.7> - Reply sorting method reprogrammed: items are sorted with solid triggers first, then those with
 wildcards and 16 whole words, then 15 whole words, 14, etc. and then unknown triggers, followed lastly by those that
 contain NO full words.
 
@@ -800,6 +856,11 @@ response wasn't found.
 
 Scans the loaded replies to find any triggers that match MESSAGE. Will return an array containing every trigger that
 matched the message, including their filenames and line numbers.
+
+=head2 stringUtil (TYPE, STRING)
+
+Called on internally for the string modification tags. TYPE would be uppercase, lowercase, formal, or sentence. String
+would be the string to modify. Returns the modified string.
 
 =head1 ALPHA LANGUAGE TUTORIAL
 
@@ -841,7 +902,7 @@ to redirect them to eachother. See the example code below.
 
 The * command is for conditionals. At this time conditionals are very primative:
 
-  * if variable = value::this reply is sent back
+  * variable=value::this reply is sent back
 
 More/better support for conditionals may or may not be added in the future.
 
@@ -873,6 +934,19 @@ The / command is used for comments (actually two /'s is the standard, as in Java
 
 These tags can be used within Alpha -REPLIES, some of which may be used also in @REDIRECTS.
 
+=head2 <star>, <star1> - <star9>
+
+Captures the patterns matched by wildcards in a reply trigger, from left to right. B<<star>> is an alias for
+B<<star1>>.
+
+=head2 <input1> - <input9>
+
+Inserts the last 1 to 9 messages the user sent (1 being most recent).
+
+=head2 <reply1> - <reply9>
+
+Inserts the last 1 to 9 messages the BOT sent in reply (1 being most recent).
+
 =head2 {topic=...}
 
 Sets a topic. Set topic to B<random> to return to the default topic.
@@ -886,6 +960,23 @@ Include a redirection within another response. Example:
   
   "Your stupid or something?"
   "Or something. At least I know the difference between "your" and "you're.""
+
+=head2 {formal}...{/formal}
+
+Formalizes A String (Makes Every Word Capitalized)
+
+=head2 {sentence}...{/sentence}
+
+Sentence-cases a string (only the first word is capitalized). Don't pass in multiple sentences if at all
+possible. :)
+
+=head2 {uppercase}...{/uppercase}
+
+UPPERCASES A STRING.
+
+=head2 {lowercase}...{/lowercase}
+
+lowercases a string
 
 =head2 <msg>
 
@@ -1081,6 +1172,26 @@ The following changes have been made from Chatbot-Alpha 1.x to 2.x
     no handler for repairing the topic.
 
 =head1 CHANGES
+
+  Version 2.02
+  - Mostly bug fixes in this release:
+  - Added 'verify' argument to the new() constructor. If 1 (default),
+    Chatbot::Alpha::Syntax is run on all files loaded. Set to 0 to avoid
+    syntax checking (not recommended).
+  - Fixed regexp bug with {formal}, {sentence}, {uppercase}, and {lowercase}.
+    They should now function correctly even if their values have odd characters
+    in them that would've previously screwed up the regexp parser.
+  - Chatbot::Alpha::Syntax updated. See its manpage for details.
+  - Rearranged a bit of the code so that <input> and <reply> would process
+    before string tags.
+
+  Version 2.01
+  - Added string tags {formal}, {sentence}, {uppercase}, {lowercase}
+  - Added tags <input> and <reply> and alias <star>.
+  - Fixed conditionals bug (conditionals wouldn't increment correctly so
+    only the last condition remained in memory. Now multiple conditions
+    can be used for one trigger... i.e. comparing gender to male/female
+    in two different conditions).
 
   Version 2.00
   - Added some AIML emulation:

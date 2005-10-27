@@ -4,6 +4,13 @@
 + redirect test
 - If you said hello I would've said: {@hello} But if you said whats up I'd say: {@whats up}
 
+// Test formalization and uppercasing with odd characters involved.
++ test formal odd
+- {formal}This... is a test/of using odd\characters with formal.{/formal}
+
++ test sentence odd
+- {sentence}This=/\is a test--of using odd@characters in sentence.{/sentence}
+
 // Redirect test with <star1>.
 + i say *
 - Indeed you do say. {@<star1>}

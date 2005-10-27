@@ -1,6 +1,6 @@
 package Chatbot::Alpha::Syntax;
 
-our $VERSION = '0.1';
+our $VERSION = '0.2';
 
 use strict;
 use warnings;
@@ -97,6 +97,8 @@ sub check {
 		my ($cmd,$data) = split(//, $line, 2);
 		$data =~ s/^\s+//g;
 		$data =~ s/^\s//g;
+
+		next unless length $cmd > 0;
 
 		# Denied/Not allowed?
 		if ($self->{denytype} ne 'allow_all') {
@@ -200,7 +202,7 @@ sub check {
 			# Comment data.
 		}
 		else {
-			die "Unknown command '$cmd' with data '$data' at $file line $num; ";
+			warn "Unknown command '$cmd' with data '$data' at $file line $num; ";
 		}
 	}
 
@@ -328,8 +330,8 @@ Follows the same rules as -RESPONSE
 
 Must follow this syntax exactly:
 
-  * if ___ = ___::___
-       ^var  ^val ^response
+  * ___=___::___
+    ^var  ^val ^response
 
 =head2 #CODE
 
@@ -340,6 +342,11 @@ Must have a length to it.
 No bugs known at the moment.
 
 =head1 CHANGES
+
+  Version 0.2
+  - Fixed some bugs, blank lines shouldn't ever be considered commands,
+    and incase of unknown command anyway only a warn is used but not a
+    die.
 
   Version 0.1
   - Initial release.
