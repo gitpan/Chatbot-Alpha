@@ -1,5 +1,13 @@
 Revision history for Perl extension Chatbot::Alpha.
 
+2.03  Sat Dec 17 12:17:00 2005
+	- Added ~REGEXP command.
+	- Added {random} tag.
+	- Added more information about #CODE on manpage.
+	- Updated Chatbot::Alpha::Syntax to support the new ~REGEXP command.
+	- Applied a patch to Syntax.pm to hopefully make automatic installation
+		run more smoothly.
+
 2.02  Thu Oct 27 10:57:30 2005
 	- Mostly bug fixes in this release:
 	- Added 'verify' argument to the new() constructor. If 1 (default),

@@ -1,6 +1,6 @@
 package Chatbot::Alpha::Syntax;
 
-our $VERSION = '0.2';
+our $VERSION = '0.3';
 
 use strict;
 use warnings;
@@ -81,6 +81,13 @@ sub check {
 	open (FILE, $file) or return 0;
 	my @data = <FILE>;
 	close (FILE);
+
+	# Handle dos text files on Mac and Unix
+	if($/ ne "\r\n") {
+		local $/ = "\r\n";
+		chomp @data;
+	}
+
 	chomp @data;
 
 	# Go through each line.
@@ -201,6 +208,9 @@ sub check {
 		elsif ($cmd eq '/') {
 			# Comment data.
 		}
+		elsif ($cmd eq '~') {
+			# A regexp. Leave it be.
+		}
 		else {
 			warn "Unknown command '$cmd' with data '$data' at $file line $num; ";
 		}
@@ -304,6 +314,11 @@ Here is the proper syntax of each Alpha command.
 =head2 +TRIGGER
 
 See SYNTAX TYPES.
+
+=head2 ~REGEXP
+
+No syntax rules have been applied to these. Just make sure your regexp triggers are
+friendly.
 
 =head2 -RESPONSE
 

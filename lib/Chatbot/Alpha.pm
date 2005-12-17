@@ -1,6 +1,6 @@
 package Chatbot::Alpha;
 
-our $VERSION = '2.02';
+our $VERSION = '2.03';
 
 # For debugging...
 use strict;
@@ -171,6 +171,32 @@ sub loadFile {
 			$data =~ s/^\s//g;
 			$data =~ s/([^A-Za-z0-9 ])/\\$1/ig;
 			$data =~ s/\\\*/\(\.\*\?\)/ig;
+			$trigger = $data;
+			$self->debug ("Trigger: $trigger");
+
+			# Set the trigger's topic.
+			$self->{_replies}->{$topic}->{$trigger}->{topic} = $topic;
+			$self->{_syntax}->{$topic}->{$trigger}->{ref} = "$file line $num";
+		}
+		elsif ($command eq '~') {
+			$self->debug ("~ Command - Regexp Trigger!");
+			if ($inReply == 1) {
+				# Reset the topics?
+				if ($topic =~ /^_that_/i) {
+					$topic = 'random';
+				}
+
+				# New reply.
+				$inReply = 0;
+				$trigger = '';
+				$counter = 0;
+				$holder = 0;
+			}
+
+			# Reply trigger.
+			$inReply = 1;
+
+			$data =~ s/^\s//g;
 			$trigger = $data;
 			$self->debug ("Trigger: $trigger");
 
@@ -653,12 +679,18 @@ sub reply {
 		$reply =~ s/<msg>/$star{msg}/ig if exists $star{msg};
 	}
 	else {
-		if ($self->{default} =~ /\|/) {
-			my @default = split(/\|/, $self->{default});
-			$reply = $default [ int(rand(scalar(@default))) ];
+		# Were they in a topic?
+		if ($self->{users}->{$id}->{topic} ne 'random') {
+			if (exists $self->{_array}->{$self->{users}->{$id}->{topic}}) {
+				$reply = "ERR: No Reply Matched in Topic $self->{users}->{$id}->{topic}";
+			}
+			else {
+				$self->{users}->{$id}->{topic} = 'random';
+				$reply = "ERR: No Reply (possibly void topic?)";
+			}
 		}
 		else {
-			$reply = $self->{default};
+			$reply = "ERR: No Reply Found";
 		}
 	}
 
@@ -669,14 +701,11 @@ sub reply {
 	# String modifiers.
 	while ($reply =~ /\{(formal|uppercase|lowercase|sentence)\}(.*?)\{\/(formal|uppercase|lowercase|sentence)\}/i) {
 		my ($type,$string) = ($1,$2);
-		print "Found string tag $type\nstring = $string\n";
 		$type = lc($type);
 		my $o = $string;
 		$string = &stringUtil ($type,$string);
 		$o =~ s/([^A-Za-z0-9 =<>])/\\$1/g;
-		print "final string = $string\no = $o\n";
 		$reply =~ s/\{$type\}$o\{\/$type\}/$string/ig;
-		print "new reply = $reply\n\n";
 	}
 
 	# A topic setter?
@@ -701,6 +730,23 @@ sub reply {
 		my $resp = $self->reply ($id,$trig);
 
 		$reply =~ s/\{\@$o\}/$resp/i;
+	}
+
+	# Randomness?
+	while ($reply =~ /\{random\}(.*?)\{\/random\}/i) {
+		my $text = $1;
+		my @options = ();
+
+		# Pipes?
+		if ($text =~ /\|/) {
+			@options = split(/\|/, $text);
+		}
+		else {
+			@options = split(/\s+/, $text);
+		}
+
+		my $rep = $options [ int(rand(scalar(@options))) ];
+		$reply =~ s/\{random\}(.*?)\{\/random\}/$rep/i;
 	}
 
 	# Update history.
@@ -874,6 +920,18 @@ The + symbol indicates a trigger. Every Alpha reply begins with this command. Th
 (i.e. "hello chatbot"). If the message matches this trigger, then the rest of the response code is considered. Else,
 the triggers are skipped over until a good match is found for the message.
 
+=head2 ~ (Tilde)
+
+The ~ command is another version of the trigger, added in version 2.03. The contents of this command would be a regexp
+pattern. Any parts that would normally be put into $1 to $9 can be obtained in <star1> to <star9>.
+
+Example:
+
+  ~ i (would have|would\'ve) done it
+  - Do you really think you <star1> done it?
+
+Use either +TRIGGER B<or> ~REGEXP, but not both. If you use both for the same reply, the latter one will override.
+
 =head2 % (Percent)
 
 This is used as a "that" -- that is, an emulation of the <that> tag in AIML. The value of this would be Alpha's last
@@ -978,6 +1036,20 @@ UPPERCASES A STRING.
 
 lowercases a string
 
+=head2 {random}...{/random}
+
+Inserts a bit of randomness within the reply. This has two uses: to insert a random single-word or to
+insert a random sentence. If the pipe symbol is used, the latter will be the case.
+
+Examples:
+
+  + random test one
+  - This {random}reply trigger command  {/random} has a random noun.
+
+  + random test two
+  - Fortune Cookie: {random}You will be rich and famous.|You will 
+  ^ go to the moon.|You will suffer an agonizing death.{/random}
+
 =head2 <msg>
 
 This can only be used in &HOLDERS, it inserts the user's message (for example a knock-knock joke convo).
@@ -1077,6 +1149,24 @@ This can only be used in &HOLDERS, it inserts the user's message (for example a 
   & There were rats there...
   & Did I mention I was crazy once?
 
+  // Regexp Trigger Tests
+  ~ i (would have|would\'ve) done it
+  - Do you really think you <star1> done it?
+
+  ~ i am (\d) years old
+  - A lot of people are <star1> years old.
+
+  ~ i am ([^0-9]) years old
+  - You're a "word" years old?
+
+  // Random tests.
+  + random test one
+  - This {random}reply trigger command  {/random} has a random noun.
+
+  + random test two
+  - Fortune Cookie: {random}You will be rich and famous.|You will 
+  ^ go to the moon.|You will suffer an agonizing death.{/random}
+
   // Topic Test
   + you suck
   - And you're very rude. Apologize now!{topic=apology}
@@ -1126,6 +1216,32 @@ topics. When in a topic, any triggers that aren't in that topic are not availabl
 reply matching. In this way, you can have the same trigger many times but under different
 topics without them interfering with one another.
 
+=head1 PERL COMMANDS
+
+The Perl command #CODE can be used to enhance your replies to perform things too complex for
+Alpha alone to handle. The "hangman" example under TOPICS above is an example of how to call
+on a subroutine from your main process and put its output into the reply.
+
+=head2 Chatbot::Alpha Internal Variables
+
+Here are the main variables you should be interested in when making complex replies with
+the #CODE command:
+
+  $reply - The final reply that the brain is going to return.
+  $id    - The user ID of the one making the request.
+  $msg   - The message that the user sent in.
+
+=head1 CONTRADICTIONS
+
+It's possible to run into errors with contradicting or conflicting code. For example, some
+types of replies are very strict in how they're formatted. For example, a %THAT command must
+come immediately following a trigger command. And a +TRIGGER and ~REGEXP should not both be
+used at the same time, the latter call would override any others.
+
+If you follow the syntax provided in the examples on this page, you should not expect to
+run into any contradictions in your code. Perhaps in a later release of Chatbot::Alpha the
+syntax checker will look for common errors such as these.
+
 =head1 ERROR CATCHING
 
 With Chatbot::Alpha 1.7, the module keeps filenames and line numbers with each command it finds
@@ -1172,6 +1288,14 @@ The following changes have been made from Chatbot-Alpha 1.x to 2.x
     no handler for repairing the topic.
 
 =head1 CHANGES
+
+  Version 2.03
+  - Added ~REGEXP command.
+  - Added {random} tag.
+  - Added more information about #CODE on manpage.
+  - Updated Chatbot::Alpha::Syntax to support the new ~REGEXP command.
+  - Applied a patch to Syntax.pm to hopefully make automatic installation
+    run more smoothly.
 
   Version 2.02
   - Mostly bug fixes in this release:

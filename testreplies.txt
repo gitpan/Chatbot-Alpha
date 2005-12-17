@@ -98,6 +98,24 @@
 & There were rats there...
 & Did I mention I was crazy once?
 
+// Regexp Trigger Tests
+~ i (would have|would\'ve) done it
+- Do you really think you <star1> done it?
+
+~ i am (\d) years old
+- A lot of people are <star1> years old.
+
+~ i am ([^0-9]) years old
+- You're a "word" years old?
+
+// Random tests.
++ random test one
+- This {random}reply trigger command  {/random} has a random noun.
+
++ random test two
+- Fortune Cookie: {random}You will be rich and famous.|You will 
+^ go to the moon.|You will suffer an agonizing death.{/random}
+
 // Topic Test
 + you suck
 - And you're very rude. Apologize now!{topic=apology}
