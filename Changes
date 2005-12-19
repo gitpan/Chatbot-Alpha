@@ -1,5 +1,9 @@
 Revision history for Perl extension Chatbot::Alpha.
 
+2.04  Mon Dec 19 15:42:00
+	- Fixed up some Perl warnings within the code.
+	- Renamed the example script to 'example.pl' to not confuse Makefile.
+
 2.03  Sat Dec 17 12:17:00 2005
 	- Added ~REGEXP command.
 	- Added {random} tag.

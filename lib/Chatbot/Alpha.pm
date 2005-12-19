@@ -1,6 +1,6 @@
 package Chatbot::Alpha;
 
-our $VERSION = '2.03';
+our $VERSION = '2.04';
 
 # For debugging...
 use strict;
@@ -89,6 +89,8 @@ sub loadFile {
 	my ($self,$file,$stream) = @_;
 	$stream = 0 unless defined $stream;
 	$stream = 0 if defined $file;
+
+	$file = '(Streamed)' unless defined $file;
 
 	$self->debug ("loadFile called for file: $file");
 
@@ -506,6 +508,10 @@ sub reply {
 
 	my %star;
 	my $reply;
+
+	for (my $i = 1; $i <= 9; $i++) {
+		$star{$i} = '';
+	}
 
 	# Topics?
 	$self->{users}->{$id}->{topic} ||= 'random';
@@ -1288,6 +1294,10 @@ The following changes have been made from Chatbot-Alpha 1.x to 2.x
     no handler for repairing the topic.
 
 =head1 CHANGES
+
+  Version 2.04
+  - Fixed up some Perl warnings within the code.
+  - Renamed the example script to 'example.pl' to not confuse Makefile.
 
   Version 2.03
   - Added ~REGEXP command.
