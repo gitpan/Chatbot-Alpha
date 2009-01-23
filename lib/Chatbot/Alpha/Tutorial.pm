@@ -1,6 +1,6 @@
 package Chatbot::Alpha::Tutorial;
 
-our $VERSION = '0.1';
+our $VERSION = '0.2';
 
 1;
 
@@ -9,6 +9,16 @@ __END__;
 =head1 NAME
 
 Chatbot::Alpha::Tutorial - Beginners' guide to Chatbot::Alpha 2.x
+
+=head1 RIVESCRIPT
+
+B<This module is obsolete!> Alpha was superceded by a more powerful language, rewritten from scratch,
+called L<RiveScript>. Chatbot::Alpha was allowed (and will be allowed) to remain here only because there are
+a few incompatibilities in the reply files. If you haven't used Alpha yet, I urge you to use RiveScript instead.
+If you've already invested time in writing reply files for Alpha, know that this module isn't going anywhere.
+However, this module is no longer actively maintained (and hasn't been in a number of years).
+
+See L<RiveScript>.
 
 =head1 INTRODUCTION
 
@@ -353,7 +363,6 @@ to make more complex replies than the ones shown here. Be creative!
 
 =head1 AUTHOR
 
-Cerone J. Kirsle
-http://www.aichaos.com/
+Casey Kirsle, http://www.cuvou.com/
 
 =cut

@@ -1,6 +1,6 @@
 package Chatbot::Alpha;
 
-our $VERSION = '2.04';
+our $VERSION = '2.05';
 
 # For debugging...
 use strict;
@@ -846,6 +846,14 @@ Chatbot::Alpha - A simple chatterbot brain.
 The Alpha brain was developed by AiChaos, Inc. for our chatterbots. The Alpha brain's language is line-by-line,
 command-driven. Alpha is a simplistic brain yet is very powerful for making impressive response systems.
 
+B<Note: This module is obsolete!> Alpha was superceded by a more powerful language, rewritten from scratch,
+called L<RiveScript>. Chatbot::Alpha was allowed (and will be allowed) to remain here only because there are
+a few incompatibilities in the reply files. If you haven't used Alpha yet, I urge you to use RiveScript instead.
+If you've already invested time in writing reply files for Alpha, know that this module isn't going anywhere.
+However, this module is no longer actively maintained (and hasn't been in a number of years).
+
+See L<RiveScript>.
+
 =head1 METHODS
 
 =head2 new (ARGUMENTS)
@@ -1295,6 +1303,9 @@ The following changes have been made from Chatbot-Alpha 1.x to 2.x
 
 =head1 CHANGES
 
+  Version 2.05
+  - Added a mention that Alpha has been superceded by RiveScript.
+
   Version 2.04
   - Fixed up some Perl warnings within the code.
   - Renamed the example script to 'example.pl' to not confuse Makefile.
@@ -1384,18 +1395,20 @@ The following changes have been made from Chatbot-Alpha 1.x to 2.x
 
 =head1 SEE ALSO
 
+L<RiveScript>, the successor to Alpha.
+
 L<Chatbot::Alpha::Tutorial>
 
 L<Chatbot::Alpha::Sort>
 
 =head1 AUTHOR
 
-Cerone J. Kirsle, cjkirsle "@" aichaos.com
+Casey Kirsle, http://www.cuvou.com/
 
 =head1 COPYRIGHT AND LICENSE
 
     Chatbot::Alpha - A simple chatterbot brain.
-    Copyright (C) 2005  Cerone J. Kirsle
+    Copyright (C) 2005  Casey Kirsle
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

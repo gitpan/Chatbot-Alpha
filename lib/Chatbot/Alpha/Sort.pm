@@ -1,6 +1,6 @@
 package Chatbot::Alpha::Sort;
 
-our $VERSION = '0.2';
+our $VERSION = '0.3';
 
 use strict;
 use warnings;
@@ -505,12 +505,12 @@ No bugs have been discovered at this time.
 
 =head1 AUTHOR
 
-Cerone J. Kirsle, cjkirsle "@" aichaos.com
+Casey Kirsle, http://www.cuvou.com/
 
 =head1 COPYRIGHT AND LICENSE
 
     Chatbot::Alpha - A simple chatterbot brain.
-    Copyright (C) 2005  Cerone J. Kirsle
+    Copyright (C) 2005  Casey Kirsle
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

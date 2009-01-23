@@ -1,6 +1,6 @@
 package Chatbot::Alpha::Syntax;
 
-our $VERSION = '0.3';
+our $VERSION = '0.4';
 
 use strict;
 use warnings;
@@ -378,12 +378,12 @@ L<Chatbot::Alpha>
 
 =head1 AUTHOR
 
-Cerone J. Kirsle, cjkirsle "@" aichaos.com
+Casey Kirsle, http://www.cuvou.com/
 
 =head1 COPYRIGHT AND LICENSE
 
     Chatbot::Alpha - A simple chatterbot brain.
-    Copyright (C) 2005  Cerone J. Kirsle
+    Copyright (C) 2005  Casey Kirsle
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

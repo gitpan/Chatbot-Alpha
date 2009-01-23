@@ -1,6 +1,11 @@
 Revision history for Perl extension Chatbot::Alpha.
 
-2.04  Mon Dec 19 15:42:00
+2.05  Fri Jan 23 11:24:00 2009
+	- This module is *officially* obsolete, and this is just a revision
+		release so that the documentation urges users use RiveScript
+		instead.
+
+2.04  Mon Dec 19 15:42:00 2005
 	- Fixed up some Perl warnings within the code.
 	- Renamed the example script to 'example.pl' to not confuse Makefile.
 
